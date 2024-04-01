@@ -95,7 +95,7 @@ func ExtractCSCAMasterListsFromLDIF(fileName string) ([]*CscaMasterList, error) 
 	return masterLists, nil
 }
 
-func MasterList2x509(masterList CscaMasterList) ([]*x509.Certificate, error) {
+func MasterList2x509(masterList *CscaMasterList) ([]*x509.Certificate, error) {
 	certs := make([]*x509.Certificate, len(masterList.CertList))
 	for i, derCertData := range masterList.CertList {
 		cert, err := x509.ParseCertificate(derCertData.FullBytes)
@@ -106,4 +106,23 @@ func MasterList2x509(masterList CscaMasterList) ([]*x509.Certificate, error) {
 		certs[i] = cert
 	}
 	return certs, nil
+}
+
+func ExtractCertsFromLDIF(fileName string) ([][]*x509.Certificate, error) {
+	masterLists, err := ExtractCSCAMasterListsFromLDIF(fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	certificates := make([][]*x509.Certificate, len(masterLists))
+	for i, masterList := range masterLists {
+		mlCerts, err := MasterList2x509(masterList)
+		if err != nil {
+			return nil, err
+		}
+
+		certificates[i] = mlCerts
+	}
+
+	return certificates, nil
 }
