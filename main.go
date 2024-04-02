@@ -2,7 +2,6 @@ package ldif
 
 import (
 	"encoding/base64"
-	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -11,102 +10,51 @@ import (
 	"github.com/rarimo/certificate-transparency-go/x509"
 
 	"github.com/github/smimesign/ietf-cms/protocol"
+	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-func ReadLDIF(fileName string) ([]LDIFRawData, error) {
-	fileInfo, err := os.Stat(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get file stat: %w", err)
-	}
-
-	ldifFile, err := os.OpenFile(fileName, os.O_RDONLY, 0)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
-	}
-	defer ldifFile.Close()
-
-	ldifData := make([]byte, fileInfo.Size())
-	_, err = ldifFile.Read(ldifData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	re, err := regexp.Compile(`(?s)cn: (.+?)\n(?:objectClass:.*?\n)+?.*?pkdMasterListContent:: (.*?)\n\n`)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compile regexp: %w", err)
-	}
-
-	dirtyLDIFData := re.FindAllStringSubmatch(string(ldifData), -1)
-	ldifRawData := make([]LDIFRawData, len(dirtyLDIFData))
-	for i, entry := range dirtyLDIFData {
-		ldifRawData[i].CN = strings.ReplaceAll(entry[1], "\n ", "")
-
-		dataB64 := strings.ReplaceAll(entry[2], "\n ", "")
-		data, err := base64.StdEncoding.DecodeString(dataB64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode MasterListContent: %w", err)
-		}
-		ldifRawData[i].Data = data
-	}
-
-	return ldifRawData, nil
+type CSCAMasterList struct {
+	Version  int
+	CertList []asn1.RawValue `asn1:"set"`
 }
 
-func ReadLDIF2(fileName string) ([][]byte, error) {
-	fileInfo, err := os.Stat(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get file stat: %w", err)
-	}
-
-	ldifFile, err := os.OpenFile(fileName, os.O_RDONLY, 0)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
-	}
-	defer ldifFile.Close()
-
-	ldifData := make([]byte, fileInfo.Size())
-	_, err = ldifFile.Read(ldifData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
+func ldifDecode(ldifData []byte) ([][]byte, error) {
 	re, err := regexp.Compile(`(?s)pkdMasterListContent:: (.*?)\n\n`)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile regexp: %w", err)
+		return nil, errors.Wrap(err, "failed to compile regexp")
 	}
 
-	dirtyLDIFData := re.FindAllStringSubmatch(string(ldifData), -1)
-	ldifRawData := make([][]byte, len(dirtyLDIFData))
-	for i, entry := range dirtyLDIFData {
+	dirtyData := re.FindAllStringSubmatch(string(ldifData), -1)
+
+	ldifRawData := make([][]byte, len(dirtyData))
+	for i, entry := range dirtyData {
 		dataB64 := strings.ReplaceAll(entry[1], "\n ", "")
 		data, err := base64.StdEncoding.DecodeString(dataB64)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decode MasterListContent: %w", err)
+			return nil, errors.Wrap(err, "failed to decode MasterListContent")
 		}
 		ldifRawData[i] = data
 	}
-
 	return ldifRawData, nil
 }
 
 func ExtractMasterLists(rawData [][]byte) (mls []CSCAMasterList, err error) {
 	mls = make([]CSCAMasterList, len(rawData))
 	for i, entry := range rawData {
-		derData, err := protocol.BER2DER(entry)
+		ci, err := protocol.ParseContentInfo(entry)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to parse ContentInfo")
 		}
 
-		var content ContentInfo
-		_, err = asn1.Unmarshal(derData, &content)
+		signedData, err := ci.SignedDataContent()
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to extract SignedData content")
 		}
 
 		var cscaMasterList CSCAMasterList
-		_, err = asn1.Unmarshal(content.Content.EncapContInfo.EContent, &cscaMasterList)
+		_, err = asn1.Unmarshal(signedData.EncapContentInfo.EContent.FullBytes, &cscaMasterList)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to parse CSCAMasterList")
 		}
 
 		mls[i] = cscaMasterList
@@ -115,12 +63,12 @@ func ExtractMasterLists(rawData [][]byte) (mls []CSCAMasterList, err error) {
 	return mls, nil
 }
 
-func MasterList2x509(masterList CSCAMasterList) ([]*x509.Certificate, error) {
+func MasterListToX509(masterList CSCAMasterList) ([]*x509.Certificate, error) {
 	certs := make([]*x509.Certificate, len(masterList.CertList))
 	for i, derCertData := range masterList.CertList {
 		cert, err := x509.ParseCertificate(derCertData.FullBytes)
 		if _, ok := err.(x509.NonFatalErrors); err != nil && !ok {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to parse Certificate")
 		}
 
 		certs[i] = cert
@@ -128,26 +76,30 @@ func MasterList2x509(masterList CSCAMasterList) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func ExtractCertsFromLDIF(fileName string) ([][]*x509.Certificate, error) {
-	data, err := ReadLDIF2(fileName)
+func LDIFToX509(fileName string) ([]*x509.Certificate, error) {
+	var certs []*x509.Certificate
+	data, err := os.ReadFile(fileName)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to read file")
 	}
 
-	masterLists, err := ExtractMasterLists(data)
+	rawLDIFData, err := ldifDecode(data)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to decode ldif data")
 	}
 
-	certificates := make([][]*x509.Certificate, len(masterLists))
-	for i, masterList := range masterLists {
-		mlCerts, err := MasterList2x509(masterList)
+	masterLists, err := ExtractMasterLists(rawLDIFData)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to extract master lists")
+	}
+
+	for _, masterList := range masterLists {
+		mlCerts, err := MasterListToX509(masterList)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed extract certificates from master list")
 		}
-
-		certificates[i] = mlCerts
+		certs = append(certs, mlCerts...)
 	}
 
-	return certificates, nil
+	return certs, nil
 }
