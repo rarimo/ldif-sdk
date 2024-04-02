@@ -52,8 +52,13 @@ func ExtractMasterLists(rawData [][]byte) (mls []CSCAMasterList, err error) {
 			return nil, errors.Wrap(err, "failed to extract SignedData content")
 		}
 
+		encapData, err := signedData.EncapContentInfo.EContentValue()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse encapsulated content")
+		}
+
 		var cscaMasterList CSCAMasterList
-		_, err = asn1.Unmarshal(signedData.EncapContentInfo.EContent.FullBytes, &cscaMasterList)
+		_, err = asn1.Unmarshal(encapData, &cscaMasterList)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to parse CSCAMasterList")
 		}
