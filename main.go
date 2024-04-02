@@ -2,6 +2,7 @@ package ldif
 
 import (
 	"encoding/base64"
+	"encoding/pem"
 	"os"
 	"regexp"
 	"strings"
@@ -102,4 +103,21 @@ func LDIFToX509(fileName string) ([]*x509.Certificate, error) {
 	}
 
 	return certs, nil
+}
+
+func LDIFToPEM(fileName string) ([]string, error) {
+	certs, err := LDIFToX509(fileName)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get certificates")
+	}
+	pems := make([]string, len(certs))
+	for i, cert := range certs {
+		pemCert := pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert.Raw,
+		}
+		pems[i] = string(pem.EncodeToMemory(&pemCert))
+	}
+
+	return pems, nil
 }
