@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"fmt"
+	"math/big"
 
 	"github.com/rarimo/certificate-transparency-go/x509"
 )
@@ -14,17 +16,24 @@ func ExtractPubKeys(certs []*x509.Certificate) ([][]byte, error) {
 	pkMap := make(map[string]struct{}, len(certs))
 
 	for _, cert := range certs {
-		key, ok := cert.PublicKey.(*rsa.PublicKey)
-		if !ok {
+		var keyValue *big.Int
+
+		switch key := cert.PublicKey.(type) {
+		case *rsa.PublicKey:
+			keyValue = key.N
+		case *ecdsa.PublicKey:
+			// FIXME @violog implement ECDSA support or confirm it to be ignored
+			continue
+		default:
 			return nil, fmt.Errorf("%T: %w", cert.PublicKey, ErrUnsupportedPublicKey)
 		}
 
-		if _, ok = pkMap[key.N.String()]; ok {
+		if _, ok := pkMap[keyValue.String()]; ok {
 			continue
 		}
 
-		pkMap[key.N.String()] = struct{}{}
-		pubKeys = append(pubKeys, key.N.Bytes())
+		pkMap[keyValue.String()] = struct{}{}
+		pubKeys = append(pubKeys, keyValue.Bytes())
 	}
 
 	return pubKeys, nil
