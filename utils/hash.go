@@ -2,6 +2,7 @@ package utils
 
 import (
 	"crypto/rsa"
+	"fmt"
 	"math/big"
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
@@ -13,14 +14,18 @@ import (
 const chunksAmount = 64
 
 func HashCertificate(certificate *x509.Certificate) (*big.Int, error) {
-	rsaPK, err := ParseCertPublicKey(certificate.RawSubjectPublicKeyInfo)
+	return HashPublicKey(certificate.RawSubjectPublicKeyInfo)
+}
+
+func HashPublicKey(publicKey []byte) (*big.Int, error) {
+	rsaPK, err := ParseCertPublicKey(publicKey)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse public key")
+		return nil, fmt.Errorf("parse public key: %w", err)
 	}
 
 	splitedPubKey := splitPublicKey(rsaPK)
 
-	var hashedChunks []*big.Int
+	hashedChunks := make([]*big.Int, 0, 4)
 	for i := 0; i < len(splitedPubKey); i += 16 {
 		chunks := splitedPubKey[i : i+16]
 		chunkHash, err := poseidon.Hash(chunks)

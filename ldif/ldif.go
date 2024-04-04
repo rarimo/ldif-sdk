@@ -2,7 +2,6 @@ package ldif
 
 import (
 	"bytes"
-	"crypto/rsa"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"regexp"
 
 	"github.com/rarimo/certificate-transparency-go/x509"
+	"github.com/rarimo/ldif-sdk/utils"
 )
 
 // LDIFToX509 parses X.509 certificates from the provided LDIF file
@@ -131,24 +131,5 @@ func LDIFToPubKeysReader(r io.Reader) ([][]byte, error) {
 		return nil, fmt.Errorf("parse LDIF to x509: %w", err)
 	}
 
-	pubKeys := make([][]byte, 0, len(certs))
-	pkMap := make(map[string]struct{}, len(certs)-1)
-
-	for _, cert := range certs {
-		key, ok := cert.PublicKey.(*rsa.PublicKey)
-		if !ok {
-			// FIXME @violog Handle ecdsa.PublicKey
-			continue
-		}
-
-		// string() conversion is intended: as we only use it as a map key, encoding is not important
-		if _, ok = pkMap[string(key.N.Bytes())]; ok {
-			continue
-		}
-
-		pkMap[string(key.N.Bytes())] = struct{}{}
-		pubKeys = append(pubKeys, key.N.Bytes())
-	}
-
-	return pubKeys, nil
+	return utils.ExtractPubKeys(certs)
 }
