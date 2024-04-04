@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var PEMCerts []string = []string{
+var PEMCerts = []string{
 	`-----BEGIN CERTIFICATE-----
 MIIGTjCCBDagAwIBAgIQOFGcgEofbpFK8jifxQuE1jANBgkqhkiG9w0BAQsFADBC
 MQswCQYDVQQGEwJCVzEMMAoGA1UEChMDR09WMRIwEAYDVQQLEwlNTklHQS1ESUMx
@@ -78,7 +78,7 @@ N2PXu5CQFbYW2uTd
 `,
 }
 
-var ldifData string = `dn: c=BW,dc=data,dc=download,dc=pkd,dc=icao,dc=int
+var ldifData = `dn: c=BW,dc=data,dc=download,dc=pkd,dc=icao,dc=int
 objectClass: top
 objectClass: country
 c: BW
@@ -217,7 +217,7 @@ pkdMasterListContent:: MIIZigYJKoZIhvcNAQcCoIIZezCCGXcCAQMxDTALBglghkgBZQMEA
 
 `
 
-var ldifData2 string = `dn: c=FI,dc=data,dc=download,dc=pkd,dc=icao,dc=int
+var ldifData2 = `dn: c=FI,dc=data,dc=download,dc=pkd,dc=icao,dc=int
 objectClass: top
 objectClass: country
 c: FI
@@ -455,5 +455,30 @@ func TestLDIFToPEM2(t *testing.T) {
 		if entry == PEMCerts[0] || entry == PEMCerts[1] {
 			t.Fatalf("certificates equal")
 		}
+	}
+}
+
+// TestLDIFToPubKeys along with other tests coverts all functions in this package
+func TestLDIFToPubKeys(t *testing.T) {
+	testCases := []struct {
+		name     string
+		ldifData string
+		wantLen  int
+	}{
+		{"2_different_keys", ldifData, 2},
+		{"5_different_keys", ldifData + ldifData2, 5},
+		{"4_total_keys_with_4_unique", ldifData + ldifData, 2},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			keys, err := LDIFToPubKeysReader(strings.NewReader(test.ldifData))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(keys) != test.wantLen {
+				t.Fatalf("pubKeys count: want %d, got %d", test.wantLen, len(keys))
+			}
+		})
 	}
 }
