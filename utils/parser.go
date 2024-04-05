@@ -10,7 +10,7 @@ import (
 
 const PemBlockType = "CERTIFICATE"
 
-func ParsePemKeys(rawPemBlocks []byte) ([]*x509.Certificate, error) {
+func ParsePemKeys(rawPemBlocks []string) ([]*x509.Certificate, error) {
 	certsAmount := len(rawPemBlocks)
 	certificates := make([]*x509.Certificate, len(rawPemBlocks))
 
