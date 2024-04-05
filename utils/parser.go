@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"crypto/rsa"
-	"encoding/hex"
 	"encoding/pem"
 
 	"github.com/rarimo/certificate-transparency-go/x509"
@@ -45,19 +43,4 @@ func ParsePemKey(rawPemKey string) (*x509.Certificate, error) {
 	}
 
 	return parsedPem, nil
-}
-
-func ParseCertPublicKey(rawPK []byte) (*rsa.PublicKey, error) {
-	pk, err := x509.ParsePKIXPublicKey(rawPK)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse pkix public key", logan.F{
-			"raw_pk": hex.EncodeToString(rawPK),
-		})
-	}
-	rsaPK, ok := pk.(*rsa.PublicKey)
-	if !ok {
-		return nil, errors.New("public key is not RSA format")
-	}
-
-	return rsaPK, nil
 }

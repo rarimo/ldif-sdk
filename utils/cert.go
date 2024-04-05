@@ -28,7 +28,7 @@ func ExtractPubKeys(certs []*x509.Certificate) ([][]byte, error) {
 			return nil, fmt.Errorf("%T: %w", cert.PublicKey, ErrUnsupportedPublicKey)
 		}
 
-		if _, ok := pkMap[keyValue.String()]; ok {
+		if _, ok := pkMap[keyValue.String()]; ok || len(keyValue.Bytes()) == ignoredKeyLength {
 			continue
 		}
 

@@ -12,40 +12,45 @@ import (
 )
 
 const (
-	pubKeyLength   = 4096
 	chunksAmount   = 64
-	subChunkLength = 16 // = len(poseidon.NROUNDSP)
+	subChunkAmount = 16 // = len(poseidon.NROUNDSP)
+	// ZKP circuits do not support 768 bits keys, now there are only 8 keys with this length
+	ignoredKeyLength = 768
 )
 
 var (
 	ErrUnsupportedPublicKey = errors.New("unsupported public key, supported formats: rsa")
-	ErrInvalidLength        = errors.New("input length must be 4096 bits")
+	ErrInvalidLength        = errors.New("input length must be 256|384|512 bytes")
 )
 
-// HashCertificate hashes the public key of the certificate, calling PoseidonHash4096
+// HashCertificate hashes the public key of the certificate, calling PoseidonHashBig
 func HashCertificate(certificate *x509.Certificate) (*big.Int, error) {
 	rsaPK, ok := certificate.PublicKey.(*rsa.PublicKey)
 	if !ok {
 		return nil, fmt.Errorf("%T: %w", certificate.PublicKey, ErrUnsupportedPublicKey)
 	}
 
-	return PoseidonHash4096(rsaPK.N.Bytes())
+	return PoseidonHashBig(rsaPK.N.Bytes())
 }
 
-// PoseidonHash4096 hashes 4096 bits of raw data with Poseidon hash function,
-// applying splitting data on chunks
-func PoseidonHash4096(raw []byte) (*big.Int, error) {
-	if len(raw) != pubKeyLength {
+// PoseidonHashBig hashes big raw data (256|384|512 bytes) with Poseidon hash function,
+// splitting data on chunks. The most common key length in CSCA list is 512 bytes.
+func PoseidonHashBig(raw []byte) (*big.Int, error) {
+	switch len(raw) {
+	case 256, 384, 512:
+	case ignoredKeyLength:
+		return nil, nil
+	default:
 		return nil, fmt.Errorf("%w, got %d", ErrInvalidLength, len(raw))
 	}
 
-	// split 4096 bits into 64 chunks of 64 bits each
+	// split 2048/3072/4096 bits into 64 chunks of 32/48/64 bits each
 	splitedPubKey := splitBytes(raw)
-	hashedChunks := make([]*big.Int, 0, chunksAmount/subChunkLength)
+	hashedChunks := make([]*big.Int, 0, chunksAmount)
 
-	// on each iteration, hash 16 chunks of 64 bits each
-	for i := 0; i < len(splitedPubKey); i += subChunkLength {
-		chunks := splitedPubKey[i : i+subChunkLength]
+	// on each iteration, hash 16 sub-chunks of 32/48/64 bits each
+	for i := 0; i < len(splitedPubKey); i += subChunkAmount {
+		chunks := splitedPubKey[i : i+subChunkAmount]
 		chunkHash, err := poseidon.Hash(chunks)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to hash poseidon 16", logan.F{"chunks": chunks})
@@ -53,6 +58,7 @@ func PoseidonHash4096(raw []byte) (*big.Int, error) {
 		hashedChunks = append(hashedChunks, chunkHash)
 	}
 
+	// hash 2/3/4 resulting hashes
 	chunkHash, err := poseidon.Hash(hashedChunks)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to perform poseidon 4", logan.F{"chunks": hashedChunks})
@@ -61,7 +67,7 @@ func PoseidonHash4096(raw []byte) (*big.Int, error) {
 	return chunkHash, nil
 }
 
-// convert bytes from chunkBytes to big integers
+// convert bytes from chunkBytes to big integers, always returning chunksAmount slice
 func splitBytes(rsaN []byte) []*big.Int {
 	chunkedPubKey := chunkBytes(rsaN, len(rsaN)/chunksAmount)
 

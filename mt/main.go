@@ -3,6 +3,7 @@ package mt
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	"github.com/rarimo/ldif-sdk/utils"
 	"github.com/wealdtech/go-merkletree/v2"
@@ -13,6 +14,7 @@ type IncrementalTree struct {
 	mTree certMT
 }
 
+// BuildTree builds a new incremental tree from raw X.509 certificates
 func BuildTree(elements []string) (*IncrementalTree, error) {
 	certificates, err := utils.ParsePemKeys(elements)
 	if err != nil {
@@ -27,6 +29,24 @@ func BuildTree(elements []string) (*IncrementalTree, error) {
 	_, err = mTree.BuildTree(certificates)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build tree")
+	}
+
+	return &IncrementalTree{
+		mTree: mTree,
+	}, nil
+}
+
+// BuildFromRaw builds a new incremental tree from raw data, directly hashing the
+// leaves. It is assumed to use 256|384|512 byte public keys as input.
+func BuildFromRaw(leaves []string) (*IncrementalTree, error) {
+	mTree := certMT{
+		poseidon: NewPoseidon(),
+		tree:     nil,
+	}
+
+	_, err := mTree.BuildFromLeaves(leaves)
+	if err != nil {
+		return nil, fmt.Errorf("build from leaves: %w", err)
 	}
 
 	return &IncrementalTree{

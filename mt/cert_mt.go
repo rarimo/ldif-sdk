@@ -1,6 +1,8 @@
 package mt
 
 import (
+	"fmt"
+
 	"github.com/rarimo/certificate-transparency-go/x509"
 	"github.com/rarimo/ldif-sdk/utils"
 	"github.com/wealdtech/go-merkletree/v2"
@@ -32,6 +34,26 @@ func (h *certMT) BuildTree(certificates []*x509.Certificate) (*merkletree.Merkle
 	h.tree, err = merkletree.NewTree(merkletree.WithData(data), merkletree.WithHashType(h.poseidon))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed build merkle tree")
+	}
+
+	return h.tree, nil
+}
+
+func (h *certMT) BuildFromLeaves(leaves []string) (*merkletree.MerkleTree, error) {
+	data := make([][]byte, 0, len(leaves))
+
+	for _, leaf := range leaves {
+		hash, err := utils.PoseidonHashBig([]byte(leaf))
+		if err != nil {
+			return nil, fmt.Errorf("hash leaf: %w", err)
+		}
+		data = append(data, hash.Bytes())
+	}
+
+	var err error
+	h.tree, err = merkletree.NewTree(merkletree.WithData(data), merkletree.WithHashType(h.poseidon))
+	if err != nil {
+		return nil, fmt.Errorf("build tree: %w", err)
 	}
 
 	return h.tree, nil
