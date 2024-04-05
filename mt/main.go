@@ -11,29 +11,28 @@ import (
 )
 
 type IncrementalTree struct {
-	mTree certMT
+	mTree certTree
 }
 
+//func (it *IncrementalTree) BuildTree(elements string) error {
 // BuildTree builds a new incremental tree from raw X.509 certificates
 func BuildTree(elements []string) (*IncrementalTree, error) {
 	certificates, err := utils.ParsePemKeys(elements)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed parse raw pem elements")
+		return errors.Wrap(err, "failed parse raw pem elements")
 	}
 
-	mTree := certMT{
+	mTree := certTree{
 		poseidon: NewPoseidon(),
 		tree:     nil,
 	}
 
-	_, err = mTree.BuildTree(certificates)
+	it.mTree.tree, err = mTree.BuildTree(certificates)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to build tree")
+		return errors.Wrap(err, "failed to build tree")
 	}
 
-	return &IncrementalTree{
-		mTree: mTree,
-	}, nil
+	return nil
 }
 
 // BuildFromRaw builds a new incremental tree from raw data, directly hashing the
@@ -54,11 +53,11 @@ func BuildFromRaw(leaves []string) (*IncrementalTree, error) {
 	}, nil
 }
 
-func (it IncrementalTree) Root() string {
+func (it *IncrementalTree) Root() string {
 	return hex.EncodeToString(it.mTree.tree.Root())
 }
 
-func (it IncrementalTree) IsExists() bool {
+func (it *IncrementalTree) IsExists() bool {
 	if it.mTree.tree != nil {
 		return true
 	}
@@ -66,7 +65,7 @@ func (it IncrementalTree) IsExists() bool {
 	return false
 }
 
-func (it IncrementalTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
+func (it *IncrementalTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
 	cert, err := utils.ParsePemKey(rawPemCert)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse pem key")
