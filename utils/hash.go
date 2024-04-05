@@ -46,7 +46,7 @@ func PoseidonHashBig(raw []byte) (*big.Int, error) {
 
 	// split 2048/3072/4096 bits into 64 chunks of 32/48/64 bits each
 	splitedPubKey := splitBytes(raw)
-	hashedChunks := make([]*big.Int, 0, 4)
+	hashedChunks := make([]*big.Int, 0, chunksAmount)
 
 	// on each iteration, hash 16 sub-chunks of 32/48/64 bits each
 	for i := 0; i < len(splitedPubKey); i += subChunkAmount {
