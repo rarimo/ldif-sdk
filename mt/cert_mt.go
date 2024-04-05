@@ -39,7 +39,7 @@ func (h *certTree) BuildTree(certificates []*x509.Certificate) (*merkletree.Merk
 	return h.tree, nil
 }
 
-func (h *certMT) BuildFromLeaves(leaves []string) (*merkletree.MerkleTree, error) {
+func (h *certTree) BuildFromLeaves(leaves []string) (*merkletree.MerkleTree, error) {
 	data := make([][]byte, 0, len(leaves))
 
 	for _, leaf := range leaves {
