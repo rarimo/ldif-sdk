@@ -431,12 +431,12 @@ pkdMasterListContent:: MIIpwQYJKoZIhvcNAQcCoIIpsjCCKa4CAQMxDzANBglghkgBZQMEA
 `
 
 func TestLDIFToPEM1(t *testing.T) {
-	data, err := LDIFToPEMReader(strings.NewReader(ldifData))
+	converter, err := FromReader(strings.NewReader(ldifData))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
-	for _, entry := range data {
+	for _, entry := range converter.ToPem() {
 		if entry == PEMCerts[0] || entry == PEMCerts[1] {
 			continue
 		}
@@ -446,12 +446,12 @@ func TestLDIFToPEM1(t *testing.T) {
 }
 
 func TestLDIFToPEM2(t *testing.T) {
-	data, err := LDIFToPEMReader(strings.NewReader(ldifData2))
+	converter, err := FromReader(strings.NewReader(ldifData2))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
-	for _, entry := range data {
+	for _, entry := range converter.ToPem() {
 		if entry == PEMCerts[0] || entry == PEMCerts[1] {
 			t.Fatalf("certificates equal")
 		}
@@ -472,7 +472,12 @@ func TestLDIFToPubKeys(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			keys, err := LDIFToPubKeysReader(strings.NewReader(test.ldifData))
+			converter, err := FromReader(strings.NewReader(test.ldifData))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			keys, err := converter.RawPubKeys()
 			if err != nil {
 				t.Fatal(err)
 			}

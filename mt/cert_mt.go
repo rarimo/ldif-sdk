@@ -9,18 +9,18 @@ import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-type CertMT interface {
+type certMT interface {
 	BuildTree(certificates []*x509.Certificate) (*merkletree.MerkleTree, error)
 	GenInclusionProof(certificate *x509.Certificate) (*merkletree.Proof, error)
 	VerifyInclusionProof(certificate *x509.Certificate, proof *merkletree.Proof) (bool, error)
 }
 
-type certMT struct {
+type certTree struct {
 	poseidon *Poseidon
 	tree     *merkletree.MerkleTree
 }
 
-func (h *certMT) BuildTree(certificates []*x509.Certificate) (*merkletree.MerkleTree, error) {
+func (h *certTree) BuildTree(certificates []*x509.Certificate) (*merkletree.MerkleTree, error) {
 	data := make([][]byte, 0)
 	for _, certificate := range certificates {
 		certHash, err := utils.HashCertificate(certificate)
@@ -39,7 +39,7 @@ func (h *certMT) BuildTree(certificates []*x509.Certificate) (*merkletree.Merkle
 	return h.tree, nil
 }
 
-func (h *certMT) BuildFromLeaves(leaves []string) (*merkletree.MerkleTree, error) {
+func (h *certTree) BuildFromLeaves(leaves []string) (*merkletree.MerkleTree, error) {
 	data := make([][]byte, 0, len(leaves))
 
 	for _, leaf := range leaves {
@@ -59,7 +59,7 @@ func (h *certMT) BuildFromLeaves(leaves []string) (*merkletree.MerkleTree, error
 	return h.tree, nil
 }
 
-func (h *certMT) GenInclusionProof(certificate *x509.Certificate) (*merkletree.Proof, error) {
+func (h *certTree) GenInclusionProof(certificate *x509.Certificate) (*merkletree.Proof, error) {
 	certHash, err := utils.HashCertificate(certificate)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to hash certificate")
@@ -73,7 +73,7 @@ func (h *certMT) GenInclusionProof(certificate *x509.Certificate) (*merkletree.P
 	return proof, nil
 }
 
-func (h *certMT) VerifyInclusionProof(certificate *x509.Certificate, proof *merkletree.Proof) (bool, error) {
+func (h *certTree) VerifyInclusionProof(certificate *x509.Certificate, proof *merkletree.Proof) (bool, error) {
 	certHash, err := utils.HashCertificate(certificate)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to hash certificate")

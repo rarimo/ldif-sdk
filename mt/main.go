@@ -11,22 +11,28 @@ import (
 )
 
 type IncrementalTree struct {
-	mTree certMT
+	mTree certTree
 }
 
-// BuildTree builds a new incremental tree from raw X.509 certificates
-func BuildTree(elements []string) (*IncrementalTree, error) {
-	certificates, err := utils.ParsePemKeys(elements)
+// BuildTree builds a new incremental tree from raw pem X.509
+// certificates array marshalled in JSON in string type
+func BuildTree(elements string) (*IncrementalTree, error) {
+	pemKeys := make([]string, 0)
+	if err := json.Unmarshal([]byte(elements), &pemKeys); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal raw pem keys")
+	}
+
+	certificates, err := utils.ParsePemKeys(pemKeys)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parse raw pem elements")
 	}
 
-	mTree := certMT{
+	mTree := certTree{
 		poseidon: NewPoseidon(),
 		tree:     nil,
 	}
 
-	_, err = mTree.BuildTree(certificates)
+	mTree.tree, err = mTree.BuildTree(certificates)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build tree")
 	}
@@ -39,7 +45,7 @@ func BuildTree(elements []string) (*IncrementalTree, error) {
 // BuildFromRaw builds a new incremental tree from raw data, directly hashing the
 // leaves. It is assumed to use 256|384|512 byte public keys as input.
 func BuildFromRaw(leaves []string) (*IncrementalTree, error) {
-	mTree := certMT{
+	mTree := certTree{
 		poseidon: NewPoseidon(),
 		tree:     nil,
 	}
@@ -54,11 +60,17 @@ func BuildFromRaw(leaves []string) (*IncrementalTree, error) {
 	}, nil
 }
 
-func (it IncrementalTree) Root() string {
+// Root returns merkle tree root, if there is no tree empty string returned
+func (it *IncrementalTree) Root() string {
+	if it.mTree.tree == nil {
+		return ""
+	}
+
 	return hex.EncodeToString(it.mTree.tree.Root())
 }
 
-func (it IncrementalTree) IsExists() bool {
+// IsExists checks if the tree exists
+func (it *IncrementalTree) IsExists() bool {
 	if it.mTree.tree != nil {
 		return true
 	}
@@ -66,7 +78,9 @@ func (it IncrementalTree) IsExists() bool {
 	return false
 }
 
-func (it IncrementalTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
+// GenerateInclusionProof generates inclusion proof for the given pem certificate,
+// returns marshalled inclusion proof
+func (it *IncrementalTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
 	cert, err := utils.ParsePemKey(rawPemCert)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse pem key")
@@ -77,7 +91,7 @@ func (it IncrementalTree) GenerateInclusionProof(rawPemCert string) ([]byte, err
 		return nil, errors.Wrap(err, "failed to generate inclusion proof")
 	}
 
-	res, err := json.Marshal(NewInclusionProof(proof))
+	res, err := json.Marshal(newInclusionProof(proof))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal proof")
 	}
@@ -85,18 +99,18 @@ func (it IncrementalTree) GenerateInclusionProof(rawPemCert string) ([]byte, err
 	return res, nil
 }
 
-type InclusionProof struct {
+type inclusionProof struct {
 	Hashes []string `json:"hashes"`
 	Index  uint64   `json:"index"`
 }
 
-func NewInclusionProof(proof *merkletree.Proof) *InclusionProof {
+func newInclusionProof(proof *merkletree.Proof) *inclusionProof {
 	hashes := make([]string, len(proof.Hashes))
 	for i, hash := range proof.Hashes {
 		hashes[i] = hex.EncodeToString(hash)
 	}
 
-	return &InclusionProof{
+	return &inclusionProof{
 		Hashes: hashes,
 		Index:  proof.Index,
 	}

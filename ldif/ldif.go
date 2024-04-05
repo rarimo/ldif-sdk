@@ -13,25 +13,46 @@ import (
 	"github.com/rarimo/ldif-sdk/utils"
 )
 
-// LDIFToX509 parses X.509 certificates from the provided LDIF file
-func LDIFToX509(fileName string) ([]*x509.Certificate, error) {
-	file, err := os.Open(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("open file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	return LDIFToX509Reader(file)
+type LDIF interface {
+	ToX509() []*x509.Certificate
+	ToPem() []string
+	RawPubKeys() ([][]byte, error)
 }
 
-// LDIFToX509Reader is like LDIFToX509 but reads from io.Reader
-func LDIFToX509Reader(r io.Reader) ([]*x509.Certificate, error) {
+type ldif struct {
+	certificates []*x509.Certificate
+}
+
+// FromFile creates new LDIF instance from file
+func FromFile(filename string) (LDIF, error) {
+	rawData, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", filename, err)
+	}
+
+	return NewLDIF(rawData)
+}
+
+// FromReader creates new LDIF instance from file
+func FromReader(r io.Reader) (LDIF, error) {
 	buf := &bytes.Buffer{}
 	if _, err := buf.ReadFrom(r); err != nil {
 		return nil, fmt.Errorf("read to buffer from reader: %w", err)
 	}
 
-	return ldifToX509(buf.Bytes())
+	return NewLDIF(buf.Bytes())
+}
+
+// NewLDIF creates new LDIF instance from raw bytes
+func NewLDIF(data []byte) (LDIF, error) {
+	certificates, err := ldifToX509(data)
+	if err != nil {
+		return nil, fmt.Errorf("converting raw content to x509: %w", err)
+	}
+
+	return &ldif{
+		certificates: certificates,
+	}, nil
 }
 
 func ldifToX509(rawData []byte) ([]*x509.Certificate, error) {
@@ -78,29 +99,13 @@ func ldifDecode(ldifData []byte) ([][]byte, error) {
 	return ldifRawData, nil
 }
 
-// LDIFToPEM converts certificates from LDIF file to PEM format
-func LDIFToPEM(fileName string) ([]string, error) {
-	certs, err := LDIFToX509(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("parse certificates from LDIF: %w", err)
-	}
-
-	return x509ToPEM(certs)
+func (l ldif) ToX509() []*x509.Certificate {
+	return l.certificates
 }
 
-// LDIFToPEMReader is like LDIFToPEM but reads from io.Reader
-func LDIFToPEMReader(r io.Reader) ([]string, error) {
-	certs, err := LDIFToX509Reader(r)
-	if err != nil {
-		return nil, fmt.Errorf("parse certificates from LDIF: %w", err)
-	}
-
-	return x509ToPEM(certs)
-}
-
-func x509ToPEM(certs []*x509.Certificate) ([]string, error) {
-	pems := make([]string, len(certs))
-	for i, cert := range certs {
+func (l ldif) ToPem() []string {
+	pems := make([]string, len(l.certificates))
+	for i, cert := range l.certificates {
 		pemCert := pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: cert.Raw,
@@ -109,27 +114,9 @@ func x509ToPEM(certs []*x509.Certificate) ([]string, error) {
 		pems[i] = string(pem.EncodeToMemory(&pemCert))
 	}
 
-	return pems, nil
+	return pems
 }
 
-// LDIFToPubKeys parses X.509 certificates from the provided LDIF file and
-// returns their public keys. Duplicate keys are excluded from the result.
-func LDIFToPubKeys(fileName string) ([][]byte, error) {
-	file, err := os.Open(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("open file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	return LDIFToPubKeysReader(file)
-}
-
-// LDIFToPubKeysReader is like LDIFToPubKeys but reads from io.Reader
-func LDIFToPubKeysReader(r io.Reader) ([][]byte, error) {
-	certs, err := LDIFToX509Reader(r)
-	if err != nil {
-		return nil, fmt.Errorf("parse LDIF to x509: %w", err)
-	}
-
-	return utils.ExtractPubKeys(certs)
+func (l ldif) RawPubKeys() ([][]byte, error) {
+	return utils.ExtractPubKeys(l.certificates)
 }
