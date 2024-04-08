@@ -6,19 +6,18 @@ import (
 	"fmt"
 
 	"github.com/rarimo/ldif-sdk/utils"
-	"github.com/wealdtech/go-merkletree/v2"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-type IncrementalTree struct {
+type TreapTree struct {
 	mTree certTree
 }
 
-// BuildTree builds a new incremental tree from raw pem X.509
-// certificates array marshalled in JSON in string type
-func BuildTree(elements string) (*IncrementalTree, error) {
+// BuildTree builds a new dynamic Merkle tree with treap data structure
+// from raw pem X.509 certificates array marshalled in JSON
+func BuildTree(elements []byte) (*TreapTree, error) {
 	pemKeys := make([]string, 0)
-	if err := json.Unmarshal([]byte(elements), &pemKeys); err != nil {
+	if err := json.Unmarshal(elements, &pemKeys); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal raw pem keys")
 	}
 
@@ -28,8 +27,7 @@ func BuildTree(elements string) (*IncrementalTree, error) {
 	}
 
 	mTree := certTree{
-		poseidon: NewPoseidon(),
-		tree:     nil,
+		tree: nil,
 	}
 
 	mTree.tree, err = mTree.BuildTree(certificates)
@@ -37,17 +35,16 @@ func BuildTree(elements string) (*IncrementalTree, error) {
 		return nil, errors.Wrap(err, "failed to build tree")
 	}
 
-	return &IncrementalTree{
+	return &TreapTree{
 		mTree: mTree,
 	}, nil
 }
 
-// BuildFromRaw builds a new incremental tree from raw data, directly hashing the
-// leaves. It is assumed to use 256|384|512 byte public keys as input.
-func BuildFromRaw(leaves []string) (*IncrementalTree, error) {
+// BuildFromRaw builds a new dynamic Merkle tree with treap data structure tree from raw data,
+// directly hashing the leaves. It is assumed to use 256|384|512 byte public keys as input.
+func BuildFromRaw(leaves []string) (*TreapTree, error) {
 	mTree := certTree{
-		poseidon: NewPoseidon(),
-		tree:     nil,
+		tree: nil,
 	}
 
 	_, err := mTree.BuildFromLeaves(leaves)
@@ -55,22 +52,29 @@ func BuildFromRaw(leaves []string) (*IncrementalTree, error) {
 		return nil, fmt.Errorf("build from leaves: %w", err)
 	}
 
-	return &IncrementalTree{
+	return &TreapTree{
 		mTree: mTree,
 	}, nil
 }
 
+// BuildFromCosmos builds a new dynamic Merkle tree with treap data structure by getting elements
+// directly from the Cosmos
+func BuildFromCosmos() (*TreapTree, error) {
+	//TODO: implement me!
+	return nil, nil
+}
+
 // Root returns merkle tree root, if there is no tree empty string returned
-func (it *IncrementalTree) Root() string {
+func (it *TreapTree) Root() string {
 	if it.mTree.tree == nil {
 		return ""
 	}
 
-	return hex.EncodeToString(it.mTree.tree.Root())
+	return hex.EncodeToString(it.mTree.tree.MerkleRoot())
 }
 
 // IsExists checks if the tree exists
-func (it *IncrementalTree) IsExists() bool {
+func (it *TreapTree) IsExists() bool {
 	if it.mTree.tree != nil {
 		return true
 	}
@@ -80,38 +84,26 @@ func (it *IncrementalTree) IsExists() bool {
 
 // GenerateInclusionProof generates inclusion proof for the given pem certificate,
 // returns marshalled inclusion proof
-func (it *IncrementalTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
+func (it *TreapTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
 	cert, err := utils.ParsePemKey(rawPemCert)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse pem key")
+		return nil, fmt.Errorf("failed to parse pem key: %w", err)
 	}
 
 	proof, err := it.mTree.GenInclusionProof(cert)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate inclusion proof")
+		return nil, fmt.Errorf("failed to generate inclusion proof: %w", err)
 	}
 
-	res, err := json.Marshal(newInclusionProof(proof))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal proof")
-	}
-
-	return res, nil
-}
-
-type inclusionProof struct {
-	Hashes []string `json:"hashes"`
-	Index  uint64   `json:"index"`
-}
-
-func newInclusionProof(proof *merkletree.Proof) *inclusionProof {
-	hashes := make([]string, len(proof.Hashes))
-	for i, hash := range proof.Hashes {
+	hashes := make([]string, len(proof))
+	for i, hash := range proof {
 		hashes[i] = hex.EncodeToString(hash)
 	}
 
-	return &inclusionProof{
-		Hashes: hashes,
-		Index:  proof.Index,
+	marshaledProof, err := json.Marshal(hashes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal proof hashes %v: %w", hashes, err)
 	}
+
+	return marshaledProof, nil
 }

@@ -2,8 +2,12 @@ github.com/certifi/gocertifi v0.0.0-20180118203423-deb3ae2ef261/go.mod h1:GJKEex
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/ethereum/go-ethereum v1.13.14 h1:EwiY3FZP94derMCIam1iW4HFVrSgIcpsu0HwTQtm6CQ=
+github.com/ethereum/go-ethereum v1.13.14/go.mod h1:TN8ZiHrdJwSe8Cb6x+p0hs5CxhJZPbqB7hHkaUXcmIU=
 github.com/github/smimesign v0.2.0 h1:Hho4YcX5N1I9XNqhq0fNx0Sts8MhLonHd+HRXVGNjvk=
 github.com/github/smimesign v0.2.0/go.mod h1:iZiiwNT4HbtGRVqCQu7uJPEZCuEE5sfSSttcnePkDl4=
+github.com/holiman/uint256 v1.2.4 h1:jUc4Nk8fm9jZabQuqr2JzednajVmBpC+oiTiXZJEApU=
+github.com/holiman/uint256 v1.2.4/go.mod h1:EOMSn4q6Nyt9P6efbI3bueV4e1b3dGlUCXeiRV4ng7E=
 github.com/iden3/go-iden3-crypto v0.0.16 h1:zN867xiz6HgErXVIV/6WyteGcOukE9gybYTorBMEdsk=
 github.com/iden3/go-iden3-crypto v0.0.16/go.mod h1:dLpM4vEPJ3nDHzhWFXDjzkn1qHoBeOT/3UEhXsEsP3E=
 github.com/keybase/go-crypto v0.0.0-20200123153347-de78d2cb44f4 h1:cTxwSmnaqLoo+4tLukHoB9iqHOu3LmLhRmgUxZo6Vp4=
@@ -22,9 +26,7 @@ github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVs
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/stretchr/testify v1.8.2 h1:+h33VjcLVPDHtOdpUCuF+7gSuG3yGIftsP1YvFihtJ8=
-github.com/wealdtech/go-merkletree/v2 v2.5.1 h1:qr1vJ2JcuqXiAzHdm+4w8qV+rZffS4tbFbdzh22KHB8=
-github.com/wealdtech/go-merkletree/v2 v2.5.1/go.mod h1:h1O8kgX9uFNowy2ObbJvIa0JUxOemb2uFfJ5rwnLnxo=
+github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 gitlab.com/distributed_lab/logan v3.8.1+incompatible h1:bYiP3P0AA0cpAL/fyOYWGq1aiKw16vZFoJz+nwbqdvU=
 gitlab.com/distributed_lab/logan v3.8.1+incompatible/go.mod h1:25oL/FPFXmyYzWeA6vahMvnFJV8P7mOx0jZhRP7nhlc=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
