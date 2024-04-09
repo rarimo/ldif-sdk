@@ -3,49 +3,51 @@ package mt
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/rarimo/certificate-transparency-go/x509"
 	"github.com/rarimo/ldif-sdk/utils"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-type certMT interface {
-	BuildTree(certificates []*x509.Certificate) (ITreap, error)
-	GenInclusionProof(certificate *x509.Certificate) ([][]byte, error)
-}
-
 type certTree struct {
 	tree ITreap
 }
 
-func (h *certTree) BuildTree(certificates []*x509.Certificate) (ITreap, error) {
-	h.tree = New()
+func newCertTree() *certTree {
+	return &certTree{tree: New()}
+}
 
+func (h *certTree) BuildFromX509(certificates []*x509.Certificate) error {
 	for _, certificate := range certificates {
 		certHash, err := utils.HashCertificate(certificate)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to hash certificate")
+			return errors.Wrap(err, "failed to hash certificate")
 		}
 
-		h.tree.Insert(certHash.Bytes(), derivePriority(hexutil.Encode(certHash.Bytes())))
+		h.tree.Insert(certHash.Bytes(), derivePriority(certHash.Bytes()))
 	}
 
-	return h.tree, nil
+	return nil
 }
 
-func (h *certTree) BuildFromLeaves(leaves []string) (ITreap, error) {
-	h.tree = New()
-
+func (h *certTree) BuildFromRawPK(leaves []string) error {
 	for _, leaf := range leaves {
 		leafHash, err := utils.PoseidonHashBig([]byte(leaf))
 		if err != nil {
-			return nil, fmt.Errorf("hash leaf: %w", err)
+			return fmt.Errorf("hash leaf: %w", err)
 		}
 
-		h.tree.Insert(leafHash.Bytes(), derivePriority(hexutil.Encode(leafHash.Bytes())))
+		h.tree.Insert(leafHash.Bytes(), derivePriority(leafHash.Bytes()))
 	}
 
-	return h.tree, nil
+	return nil
+}
+
+func (h *certTree) BuildFromHashes(leaves [][]byte) error {
+	for _, leaf := range leaves {
+		h.tree.Insert(leaf, derivePriority(leaf))
+	}
+
+	return nil
 }
 
 func (h *certTree) GenInclusionProof(certificate *x509.Certificate) ([][]byte, error) {

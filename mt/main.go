@@ -5,17 +5,26 @@ import (
 	"encoding/json"
 	"fmt"
 
+	cosmos "github.com/rarimo/ldif-sdk/cosmos/pkg/types"
 	"github.com/rarimo/ldif-sdk/utils"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
 type TreapTree struct {
-	mTree certTree
+	mTree *certTree
+}
+
+func newTreapTree() *TreapTree {
+	return &TreapTree{
+		mTree: newCertTree(),
+	}
 }
 
 // BuildTree builds a new dynamic Merkle tree with treap data structure
 // from raw pem X.509 certificates array marshalled in JSON
 func BuildTree(elements []byte) (*TreapTree, error) {
+	treapTree := newTreapTree()
+
 	pemKeys := make([]string, 0)
 	if err := json.Unmarshal(elements, &pemKeys); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal raw pem keys")
@@ -26,42 +35,48 @@ func BuildTree(elements []byte) (*TreapTree, error) {
 		return nil, errors.Wrap(err, "failed parse raw pem elements")
 	}
 
-	mTree := certTree{
-		tree: nil,
-	}
-
-	mTree.tree, err = mTree.BuildTree(certificates)
+	err = treapTree.mTree.BuildFromX509(certificates)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build tree")
 	}
 
-	return &TreapTree{
-		mTree: mTree,
-	}, nil
+	return treapTree, nil
 }
 
 // BuildFromRaw builds a new dynamic Merkle tree with treap data structure tree from raw data,
 // directly hashing the leaves. It is assumed to use 256|384|512 byte public keys as input.
 func BuildFromRaw(leaves []string) (*TreapTree, error) {
-	mTree := certTree{
-		tree: nil,
-	}
+	treapTree := newTreapTree()
 
-	_, err := mTree.BuildFromLeaves(leaves)
+	err := treapTree.mTree.BuildFromRawPK(leaves)
 	if err != nil {
 		return nil, fmt.Errorf("build from leaves: %w", err)
 	}
 
-	return &TreapTree{
-		mTree: mTree,
-	}, nil
+	return treapTree, nil
 }
 
 // BuildFromCosmos builds a new dynamic Merkle tree with treap data structure by getting elements
 // directly from the Cosmos
-func BuildFromCosmos() (*TreapTree, error) {
-	//TODO: implement me!
-	return nil, nil
+func BuildFromCosmos(addr string, isSecure bool) (*TreapTree, error) {
+	treapTree := newTreapTree()
+
+	grpcClient, err := utils.NewGRPCClient(addr, isSecure)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create grpc client: %w", err)
+	}
+
+	leaves, err := utils.FetchHashLeavesFromCosmos(cosmos.NewQueryClient(grpcClient))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch leaves from cosmos: %w", err)
+	}
+
+	err = treapTree.mTree.BuildFromHashes(leaves)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build tree from pub key hashes: %w", err)
+	}
+
+	return treapTree, nil
 }
 
 // Root returns merkle tree root, if there is no tree empty string returned

@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
@@ -175,16 +173,11 @@ func hashNodes(a, b *Node) []byte {
 }
 
 // priority = hash(key) % (2^64-1)
-// function panics if key is not hex-encoded or mustPoseidon fails
-func derivePriority(key string) uint64 {
-	if !strings.HasPrefix(key, "0x") && !strings.HasPrefix(key, "0X") {
-		key = "0x" + key
-	}
-
+// function panics if mustPoseidon fails
+func derivePriority(key []byte) uint64 {
 	var (
-		keyBytes = hexutil.MustDecode(key)
-		keyHash  = new(big.Int).SetBytes(mustPoseidon(keyBytes).Bytes())
-		u64      = new(big.Int).SetUint64(math.MaxUint64)
+		keyHash = new(big.Int).SetBytes(mustPoseidon(key).Bytes())
+		u64     = new(big.Int).SetUint64(math.MaxUint64)
 	)
 
 	return keyHash.Mod(keyHash, u64).Uint64()
