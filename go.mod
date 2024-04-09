@@ -2,12 +2,10 @@ module github.com/rarimo/ldif-sdk
 
 go 1.21
 
-toolchain go1.22.1
-
 require (
 	github.com/cosmos/cosmos-sdk v0.50.5
 	github.com/cosmos/gogoproto v1.4.12
-	github.com/ethereum/go-ethereum v1.13.14
+	github.com/ethereum/go-ethereum v1.10.26
 	github.com/github/smimesign v0.2.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/iden3/go-iden3-crypto v0.0.16
@@ -54,7 +52,6 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-metrics v0.5.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
-	github.com/holiman/uint256 v1.2.4 // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/keybase/go-crypto v0.0.0-20200123153347-de78d2cb44f4 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
