@@ -16,7 +16,7 @@
     "application/json"
   ],
   "paths": {
-    "/rarimo/rarimo/ldif-sdk/cosmos/cscalist/params": {
+    "/rarimo/rarimo-core/cscalist/params": {
       "get": {
         "operationId": "Query_Params",
         "responses": {
@@ -38,7 +38,7 @@
         ]
       }
     },
-    "/rarimo/rarimo/ldif-sdk/cosmos/cscalist/proof": {
+    "/rarimo/rarimo-core/cscalist/proof": {
       "get": {
         "operationId": "Query_MerkleProof",
         "responses": {
@@ -69,7 +69,7 @@
         ]
       }
     },
-    "/rarimo/rarimo/ldif-sdk/cosmos/cscalist/tree": {
+    "/rarimo/rarimo-core/cscalist/tree": {
       "get": {
         "operationId": "Query_Tree",
         "responses": {
@@ -178,7 +178,7 @@
       "type": "object",
       "properties": {
         "params": {
-          "$ref": "#/definitions/ldif_sdkcscalistParams"
+          "$ref": "#/definitions/rarimocorecscalistParams"
         }
       }
     },
@@ -197,7 +197,16 @@
         }
       }
     },
-    "ldif_sdkcscalistParams": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rarimocorecscalistParams": {
       "type": "object",
       "properties": {
         "lcgA": {
@@ -226,15 +235,6 @@
           "title": "RootUpdated is true when the root node was updated in Rarimo, but not in Chain"
         }
       }
-    },
-    "protobufAny": {
-      "type": "object",
-      "properties": {
-        "@type": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": {}
     },
     "rpcStatus": {
       "type": "object",

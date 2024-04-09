@@ -135,7 +135,7 @@ func RegisterQueryHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/rarimo.ldif_sdk.cscalist.Query/Params", runtime.WithHTTPPathPattern("/rarimo/rarimo/ldif-sdk/cosmos/cscalist/params"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/rarimo.rarimocore.cscalist.Query/Params", runtime.WithHTTPPathPattern("/rarimo/rarimo-core/cscalist/params"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -160,7 +160,7 @@ func RegisterQueryHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/rarimo.ldif_sdk.cscalist.Query/Tree", runtime.WithHTTPPathPattern("/rarimo/rarimo/ldif-sdk/cosmos/cscalist/tree"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/rarimo.rarimocore.cscalist.Query/Tree", runtime.WithHTTPPathPattern("/rarimo/rarimo-core/cscalist/tree"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -185,7 +185,7 @@ func RegisterQueryHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/rarimo.ldif_sdk.cscalist.Query/MerkleProof", runtime.WithHTTPPathPattern("/rarimo/rarimo/ldif-sdk/cosmos/cscalist/proof"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/rarimo.rarimocore.cscalist.Query/MerkleProof", runtime.WithHTTPPathPattern("/rarimo/rarimo-core/cscalist/proof"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -249,7 +249,7 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/rarimo.ldif_sdk.cscalist.Query/Params", runtime.WithHTTPPathPattern("/rarimo/rarimo/ldif-sdk/cosmos/cscalist/params"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/rarimo.rarimocore.cscalist.Query/Params", runtime.WithHTTPPathPattern("/rarimo/rarimo-core/cscalist/params"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -271,7 +271,7 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/rarimo.ldif_sdk.cscalist.Query/Tree", runtime.WithHTTPPathPattern("/rarimo/rarimo/ldif-sdk/cosmos/cscalist/tree"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/rarimo.rarimocore.cscalist.Query/Tree", runtime.WithHTTPPathPattern("/rarimo/rarimo-core/cscalist/tree"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -293,7 +293,7 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/rarimo.ldif_sdk.cscalist.Query/MerkleProof", runtime.WithHTTPPathPattern("/rarimo/rarimo/ldif-sdk/cosmos/cscalist/proof"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/rarimo.rarimocore.cscalist.Query/MerkleProof", runtime.WithHTTPPathPattern("/rarimo/rarimo-core/cscalist/proof"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -313,11 +313,11 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 }
 
 var (
-	pattern_Query_Params_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"rarimo", "ldif-sdk", "cosmos", "cscalist", "params"}, ""))
+	pattern_Query_Params_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"rarimo", "rarimo-core", "cscalist", "params"}, ""))
 
-	pattern_Query_Tree_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"rarimo", "ldif-sdk", "cosmos", "cscalist", "tree"}, ""))
+	pattern_Query_Tree_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"rarimo", "rarimo-core", "cscalist", "tree"}, ""))
 
-	pattern_Query_MerkleProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"rarimo", "ldif-sdk", "cosmos", "cscalist", "proof"}, ""))
+	pattern_Query_MerkleProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"rarimo", "rarimo-core", "cscalist", "proof"}, ""))
 )
 
 var (

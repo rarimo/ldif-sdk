@@ -1,5 +1,5 @@
 syntax = "proto3";
-package rarimo.ldif_sdk.cscalist;
+package rarimo.rarimocore.cscalist;
 
 import "gogoproto/gogo.proto";
 

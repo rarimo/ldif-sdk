@@ -1,5 +1,5 @@
 syntax = "proto3";
-package rarimo.ldif_sdk.cscalist;
+package rarimo.rarimocore.cscalist;
 
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
@@ -10,15 +10,15 @@ option go_package = "github.com/rarimo/ldif-sdk/cosmos";
 
 service Query {
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
-    option (google.api.http).get = "/rarimo/rarimo/ldif-sdk/cosmos/cscalist/params";
+    option (google.api.http).get = "/rarimo/rarimo-core/cscalist/params";
   }
 
   rpc Tree(QueryTreeRequest) returns (QueryTreeResponse) {
-    option (google.api.http).get = "/rarimo/rarimo/ldif-sdk/cosmos/cscalist/tree";
+    option (google.api.http).get = "/rarimo/rarimo-core/cscalist/tree";
   };
 
   rpc MerkleProof(QueryGetMerkleProofRequest) returns (QueryGetMerkleProofResponse) {
-    option (google.api.http).get = "/rarimo/rarimo/ldif-sdk/cosmos/cscalist/proof";
+    option (google.api.http).get = "/rarimo/rarimo-core/cscalist/proof";
   };
 }
 

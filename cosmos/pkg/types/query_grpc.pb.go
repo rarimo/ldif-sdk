@@ -37,7 +37,7 @@ func NewQueryClient(cc grpc.ClientConnInterface) QueryClient {
 
 func (c *queryClient) Params(ctx context.Context, in *QueryParamsRequest, opts ...grpc.CallOption) (*QueryParamsResponse, error) {
 	out := new(QueryParamsResponse)
-	err := c.cc.Invoke(ctx, "/rarimo.ldif_sdk.cscalist.Query/Params", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/rarimo.rarimocore.cscalist.Query/Params", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (c *queryClient) Params(ctx context.Context, in *QueryParamsRequest, opts .
 
 func (c *queryClient) Tree(ctx context.Context, in *QueryTreeRequest, opts ...grpc.CallOption) (*QueryTreeResponse, error) {
 	out := new(QueryTreeResponse)
-	err := c.cc.Invoke(ctx, "/rarimo.ldif_sdk.cscalist.Query/Tree", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/rarimo.rarimocore.cscalist.Query/Tree", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (c *queryClient) Tree(ctx context.Context, in *QueryTreeRequest, opts ...gr
 
 func (c *queryClient) MerkleProof(ctx context.Context, in *QueryGetMerkleProofRequest, opts ...grpc.CallOption) (*QueryGetMerkleProofResponse, error) {
 	out := new(QueryGetMerkleProofResponse)
-	err := c.cc.Invoke(ctx, "/rarimo.ldif_sdk.cscalist.Query/MerkleProof", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/rarimo.rarimocore.cscalist.Query/MerkleProof", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func _Query_Params_Handler(srv interface{}, ctx context.Context, dec func(interf
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rarimo.ldif_sdk.cscalist.Query/Params",
+		FullMethod: "/rarimo.rarimocore.cscalist.Query/Params",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(QueryServer).Params(ctx, req.(*QueryParamsRequest))
@@ -124,7 +124,7 @@ func _Query_Tree_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rarimo.ldif_sdk.cscalist.Query/Tree",
+		FullMethod: "/rarimo.rarimocore.cscalist.Query/Tree",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(QueryServer).Tree(ctx, req.(*QueryTreeRequest))
@@ -142,7 +142,7 @@ func _Query_MerkleProof_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rarimo.ldif_sdk.cscalist.Query/MerkleProof",
+		FullMethod: "/rarimo.rarimocore.cscalist.Query/MerkleProof",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(QueryServer).MerkleProof(ctx, req.(*QueryGetMerkleProofRequest))
@@ -154,7 +154,7 @@ func _Query_MerkleProof_Handler(srv interface{}, ctx context.Context, dec func(i
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Query_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "rarimo.ldif_sdk.cscalist.Query",
+	ServiceName: "rarimo.rarimocore.cscalist.Query",
 	HandlerType: (*QueryServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
