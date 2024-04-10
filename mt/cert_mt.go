@@ -1,6 +1,7 @@
 package mt
 
 import (
+	errs "errors"
 	"fmt"
 
 	"github.com/rarimo/certificate-transparency-go/x509"
@@ -20,7 +21,14 @@ func (h *certTree) BuildFromX509(certificates []*x509.Certificate) error {
 	for _, certificate := range certificates {
 		certHash, err := utils.HashCertificate(certificate)
 		if err != nil {
+			if errs.Is(err, utils.ErrUnsupportedPublicKey) {
+				continue
+			}
 			return errors.Wrap(err, "failed to hash certificate")
+		}
+
+		if certHash == nil {
+			continue
 		}
 
 		h.tree.Insert(certHash.Bytes(), derivePriority(certHash.Bytes()))

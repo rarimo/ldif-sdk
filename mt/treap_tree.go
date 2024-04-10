@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"slices"
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
 )
@@ -83,6 +84,7 @@ func (t *Treap) MerklePath(key []byte) [][]byte {
 	for node != nil {
 		if bytes.Compare(node.Hash, key) == 0 {
 			result = append(result, hashNodes(node.Left, node.Right))
+			slices.Reverse(result)
 			return result
 		}
 
@@ -172,7 +174,7 @@ func hashNodes(a, b *Node) []byte {
 	return hash(left, right)
 }
 
-// priority = hash(key) % (2^64-1)
+// priority = MustPoseidon(key) % (2^64-1)
 // function panics if MustPoseidon fails
 func derivePriority(key []byte) uint64 {
 	var (
@@ -197,7 +199,7 @@ func hash(a, b []byte) []byte {
 		return MustPoseidon([][]byte{a, b}...).Bytes()
 	}
 
-	return MustPoseidon([][]byte{a, b}...).Bytes()
+	return MustPoseidon([][]byte{b, a}...).Bytes()
 }
 
 // MustPoseidon performs Poseidon hashing, but panics when error in
