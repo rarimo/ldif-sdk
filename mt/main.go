@@ -1,10 +1,10 @@
 package mt
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	cosmos "github.com/rarimo/ldif-sdk/cosmos/pkg/types"
 	"github.com/rarimo/ldif-sdk/utils"
 	"gitlab.com/distributed_lab/logan/v3/errors"
@@ -85,7 +85,7 @@ func (it *TreapTree) Root() string {
 		return ""
 	}
 
-	return hexutil.Encode(it.mTree.tree.MerkleRoot())
+	return fmt.Sprintf("0x%s", hex.EncodeToString(it.mTree.tree.MerkleRoot()))
 }
 
 // IsExists checks if the tree exists

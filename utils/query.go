@@ -3,11 +3,11 @@ package utils
 import (
 	"context"
 	"crypto/tls"
+	"encoding/hex"
 	"fmt"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	cosmos "github.com/rarimo/ldif-sdk/cosmos/pkg/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -54,7 +54,7 @@ func FetchHashLeavesFromCosmos(client cosmos.QueryClient) ([][]byte, error) {
 		}
 
 		for _, node := range resp.Tree {
-			bytesKey, err := hexutil.Decode(node.Key)
+			bytesKey, err := hex.DecodeString(node.Key)
 			if err != nil {
 				return nil, fmt.Errorf("failed to decode key %s: %w", node.Key, err)
 			}
