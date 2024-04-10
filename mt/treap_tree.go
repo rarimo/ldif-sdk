@@ -200,8 +200,8 @@ func hash(a, b []byte) []byte {
 	return MustPoseidon([][]byte{a, b}...).Bytes()
 }
 
-// mustHash performs Poseidon hashing, but panics when error in
-// poseidon.Hash occurs, error may be in case if:
+// MustPoseidon performs Poseidon hashing, but panics when error in poseidon.Hash
+// occurs, error may be in case if:
 //  1. invalid array length (0 or ... > 16)
 //  2. any value is not in finite field of constants.Q
 func MustPoseidon(inputs ...[]byte) *big.Int {
