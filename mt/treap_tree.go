@@ -173,17 +173,17 @@ func hashNodes(a, b *Node) []byte {
 }
 
 // priority = hash(key) % (2^64-1)
-// function panics if mustPoseidon fails
+// function panics if MustPoseidon fails
 func derivePriority(key []byte) uint64 {
 	var (
-		keyHash = new(big.Int).SetBytes(mustPoseidon(key).Bytes())
+		keyHash = new(big.Int).SetBytes(MustPoseidon(key).Bytes())
 		u64     = new(big.Int).SetUint64(math.MaxUint64)
 	)
 
 	return keyHash.Mod(keyHash, u64).Uint64()
 }
 
-// function panics if mustPoseidon fails
+// function panics if MustPoseidon fails
 func hash(a, b []byte) []byte {
 	if len(a) == 0 {
 		return b
@@ -194,17 +194,17 @@ func hash(a, b []byte) []byte {
 	}
 
 	if bytes.Compare(a, b) < 0 {
-		return mustPoseidon([][]byte{a, b}...).Bytes()
+		return MustPoseidon([][]byte{a, b}...).Bytes()
 	}
 
-	return mustPoseidon([][]byte{b, a}...).Bytes()
+	return MustPoseidon([][]byte{a, b}...).Bytes()
 }
 
-// mustHash performs Poseidon hashing, but panics when error in
+// MustPoseidon performs Poseidon hashing, but panics when error in
 // poseidon.Hash occurs, error may be in case if:
 //  1. invalid array length (0 or ... > 16)
 //  2. any value is not in finite field of constants.Q
-func mustPoseidon(inputs ...[]byte) *big.Int {
+func MustPoseidon(inputs ...[]byte) *big.Int {
 	bigInputs := make([]*big.Int, len(inputs))
 	for i := 0; i < len(inputs); i++ {
 		bigInputs[i] = new(big.Int).SetBytes(inputs[i])
