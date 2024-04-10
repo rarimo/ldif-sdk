@@ -50,13 +50,23 @@ func (h *certTree) BuildFromHashes(leaves [][]byte) error {
 	return nil
 }
 
-func (h *certTree) GenInclusionProof(certificate *x509.Certificate) ([][]byte, error) {
+func (h *certTree) GenInclusionProof(certificate *x509.Certificate) (*proof, error) {
 	certHash, err := utils.HashCertificate(certificate)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to hash certificate")
 	}
 
-	proof := h.tree.MerklePath(certHash.Bytes())
+	merklePath := h.tree.MerklePath(certHash.Bytes())
 
-	return proof, nil
+	return &proof{
+		Existence: true,
+		Siblings:  merklePath,
+	}, nil
+}
+
+type proof struct {
+	// Existence indicates whether this is a proof of existence or non-existence.
+	Existence bool `json:"existence"`
+	// Siblings is a list of non-empty sibling hashes.
+	Siblings [][]byte `json:"siblings"`
 }

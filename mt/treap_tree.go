@@ -197,7 +197,7 @@ func hash(a, b []byte) []byte {
 		return mustPoseidon([][]byte{a, b}...).Bytes()
 	}
 
-	return mustPoseidon([][]byte{a, b}...).Bytes()
+	return mustPoseidon([][]byte{b, a}...).Bytes()
 }
 
 // mustHash performs Poseidon hashing, but panics when error in

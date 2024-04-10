@@ -1,10 +1,10 @@
 package mt
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	cosmos "github.com/rarimo/ldif-sdk/cosmos/pkg/types"
 	"github.com/rarimo/ldif-sdk/utils"
 	"gitlab.com/distributed_lab/logan/v3/errors"
@@ -57,7 +57,7 @@ func BuildFromRaw(leaves []string) (*TreapTree, error) {
 }
 
 // BuildFromCosmos builds a new dynamic Merkle tree with treap data structure by getting elements
-// directly from the Cosmos
+// directly from the Cosmos. It requires GRPC Cosmos address with secure flag.
 func BuildFromCosmos(addr string, isSecure bool) (*TreapTree, error) {
 	treapTree := newTreapTree()
 
@@ -85,7 +85,7 @@ func (it *TreapTree) Root() string {
 		return ""
 	}
 
-	return hex.EncodeToString(it.mTree.tree.MerkleRoot())
+	return hexutil.Encode(it.mTree.tree.MerkleRoot())
 }
 
 // IsExists checks if the tree exists
@@ -98,26 +98,22 @@ func (it *TreapTree) IsExists() bool {
 }
 
 // GenerateInclusionProof generates inclusion proof for the given pem certificate,
-// returns marshalled inclusion proof
+// returns marshalled inclusion proof type that has boolean existence and bytes array
+// of siblings
 func (it *TreapTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
 	cert, err := utils.ParsePemKey(rawPemCert)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse pem key: %w", err)
 	}
 
-	proof, err := it.mTree.GenInclusionProof(cert)
+	incProof, err := it.mTree.GenInclusionProof(cert)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate inclusion proof: %w", err)
 	}
 
-	hashes := make([]string, len(proof))
-	for i, hash := range proof {
-		hashes[i] = hex.EncodeToString(hash)
-	}
-
-	marshaledProof, err := json.Marshal(hashes)
+	marshaledProof, err := json.Marshal(incProof)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal proof hashes %v: %w", hashes, err)
+		return nil, fmt.Errorf("failed to marshal proof %v: %w", incProof, err)
 	}
 
 	return marshaledProof, nil
