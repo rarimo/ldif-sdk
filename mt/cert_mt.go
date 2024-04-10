@@ -1,88 +1,80 @@
 package mt
 
 import (
+	errs "errors"
 	"fmt"
 
 	"github.com/rarimo/certificate-transparency-go/x509"
 	"github.com/rarimo/ldif-sdk/utils"
-	"github.com/wealdtech/go-merkletree/v2"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-type certMT interface {
-	BuildTree(certificates []*x509.Certificate) (*merkletree.MerkleTree, error)
-	GenInclusionProof(certificate *x509.Certificate) (*merkletree.Proof, error)
-	VerifyInclusionProof(certificate *x509.Certificate, proof *merkletree.Proof) (bool, error)
-}
-
 type certTree struct {
-	poseidon *Poseidon
-	tree     *merkletree.MerkleTree
+	tree ITreap
 }
 
-func (h *certTree) BuildTree(certificates []*x509.Certificate) (*merkletree.MerkleTree, error) {
-	data := make([][]byte, 0)
+func newCertTree() *certTree {
+	return &certTree{tree: New()}
+}
+
+func (h *certTree) BuildFromX509(certificates []*x509.Certificate) error {
 	for _, certificate := range certificates {
 		certHash, err := utils.HashCertificate(certificate)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to hash certificate")
+			if errs.Is(err, utils.ErrUnsupportedPublicKey) {
+				continue
+			}
+			return errors.Wrap(err, "failed to hash certificate")
 		}
-		data = append(data, certHash.Bytes())
+
+		if certHash == nil {
+			continue
+		}
+
+		h.tree.Insert(certHash.Bytes(), derivePriority(certHash.Bytes()))
 	}
 
-	var err error
-	h.tree, err = merkletree.NewTree(merkletree.WithData(data), merkletree.WithHashType(h.poseidon))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed build merkle tree")
-	}
-
-	return h.tree, nil
+	return nil
 }
 
-func (h *certTree) BuildFromLeaves(leaves []string) (*merkletree.MerkleTree, error) {
-	data := make([][]byte, 0, len(leaves))
-
+func (h *certTree) BuildFromRawPK(leaves []string) error {
 	for _, leaf := range leaves {
-		hash, err := utils.PoseidonHashBig([]byte(leaf))
+		leafHash, err := utils.PoseidonHashBig([]byte(leaf))
 		if err != nil {
-			return nil, fmt.Errorf("hash leaf: %w", err)
+			return fmt.Errorf("hash leaf: %w", err)
 		}
-		data = append(data, hash.Bytes())
+
+		h.tree.Insert(leafHash.Bytes(), derivePriority(leafHash.Bytes()))
 	}
 
-	var err error
-	h.tree, err = merkletree.NewTree(merkletree.WithData(data), merkletree.WithHashType(h.poseidon))
-	if err != nil {
-		return nil, fmt.Errorf("build tree: %w", err)
-	}
-
-	return h.tree, nil
+	return nil
 }
 
-func (h *certTree) GenInclusionProof(certificate *x509.Certificate) (*merkletree.Proof, error) {
+func (h *certTree) BuildFromHashes(leaves [][]byte) error {
+	for _, leaf := range leaves {
+		h.tree.Insert(leaf, derivePriority(leaf))
+	}
+
+	return nil
+}
+
+func (h *certTree) GenInclusionProof(certificate *x509.Certificate) (*proof, error) {
 	certHash, err := utils.HashCertificate(certificate)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to hash certificate")
 	}
 
-	proof, err := h.tree.GenerateProof(certHash.Bytes(), 0)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate merkle tree inclusion proof")
-	}
+	merklePath := h.tree.MerklePath(certHash.Bytes())
 
-	return proof, nil
+	return &proof{
+		Existence: true,
+		Siblings:  merklePath,
+	}, nil
 }
 
-func (h *certTree) VerifyInclusionProof(certificate *x509.Certificate, proof *merkletree.Proof) (bool, error) {
-	certHash, err := utils.HashCertificate(certificate)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to hash certificate")
-	}
-
-	proven, err := merkletree.VerifyProofUsing(certHash.Bytes(), false, proof, [][]byte{h.tree.Root()}, h.poseidon)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to verify proof")
-	}
-
-	return proven, nil
+type proof struct {
+	// Existence indicates whether this is a proof of existence or non-existence.
+	Existence bool `json:"existence"`
+	// Siblings is a list of non-empty sibling hashes.
+	Siblings [][]byte `json:"siblings"`
 }

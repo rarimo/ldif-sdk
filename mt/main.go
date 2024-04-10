@@ -5,20 +5,28 @@ import (
 	"encoding/json"
 	"fmt"
 
+	cosmos "github.com/rarimo/ldif-sdk/cosmos/pkg/types"
 	"github.com/rarimo/ldif-sdk/utils"
-	"github.com/wealdtech/go-merkletree/v2"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-type IncrementalTree struct {
-	mTree certTree
+type TreapTree struct {
+	mTree *certTree
 }
 
-// BuildTree builds a new incremental tree from raw pem X.509
-// certificates array marshalled in JSON in string type
-func BuildTree(elements string) (*IncrementalTree, error) {
+func newTreapTree() *TreapTree {
+	return &TreapTree{
+		mTree: newCertTree(),
+	}
+}
+
+// BuildTree builds a new dynamic Merkle tree with treap data structure
+// from raw pem X.509 certificates array marshalled in JSON
+func BuildTree(elements []byte) (*TreapTree, error) {
+	treapTree := newTreapTree()
+
 	pemKeys := make([]string, 0)
-	if err := json.Unmarshal([]byte(elements), &pemKeys); err != nil {
+	if err := json.Unmarshal(elements, &pemKeys); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal raw pem keys")
 	}
 
@@ -27,50 +35,61 @@ func BuildTree(elements string) (*IncrementalTree, error) {
 		return nil, errors.Wrap(err, "failed parse raw pem elements")
 	}
 
-	mTree := certTree{
-		poseidon: NewPoseidon(),
-		tree:     nil,
-	}
-
-	mTree.tree, err = mTree.BuildTree(certificates)
+	err = treapTree.mTree.BuildFromX509(certificates)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build tree")
 	}
 
-	return &IncrementalTree{
-		mTree: mTree,
-	}, nil
+	return treapTree, nil
 }
 
-// BuildFromRaw builds a new incremental tree from raw data, directly hashing the
-// leaves. It is assumed to use 256|384|512 byte public keys as input.
-func BuildFromRaw(leaves []string) (*IncrementalTree, error) {
-	mTree := certTree{
-		poseidon: NewPoseidon(),
-		tree:     nil,
-	}
+// BuildFromRaw builds a new dynamic Merkle tree with treap data structure tree from raw data,
+// directly hashing the leaves. It is assumed to use 256|384|512 byte public keys as input.
+func BuildFromRaw(leaves []string) (*TreapTree, error) {
+	treapTree := newTreapTree()
 
-	_, err := mTree.BuildFromLeaves(leaves)
+	err := treapTree.mTree.BuildFromRawPK(leaves)
 	if err != nil {
 		return nil, fmt.Errorf("build from leaves: %w", err)
 	}
 
-	return &IncrementalTree{
-		mTree: mTree,
-	}, nil
+	return treapTree, nil
+}
+
+// BuildFromCosmos builds a new dynamic Merkle tree with treap data structure by getting elements
+// directly from the Cosmos. It requires GRPC Cosmos address with secure flag.
+func BuildFromCosmos(addr string, isSecure bool) (*TreapTree, error) {
+	treapTree := newTreapTree()
+
+	grpcClient, err := utils.NewGRPCClient(addr, isSecure)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create grpc client: %w", err)
+	}
+
+	leaves, err := utils.FetchHashLeavesFromCosmos(cosmos.NewQueryClient(grpcClient))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch leaves from cosmos: %w", err)
+	}
+
+	err = treapTree.mTree.BuildFromHashes(leaves)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build tree from pub key hashes: %w", err)
+	}
+
+	return treapTree, nil
 }
 
 // Root returns merkle tree root, if there is no tree empty string returned
-func (it *IncrementalTree) Root() string {
+func (it *TreapTree) Root() string {
 	if it.mTree.tree == nil {
 		return ""
 	}
 
-	return hex.EncodeToString(it.mTree.tree.Root())
+	return fmt.Sprintf("0x%s", hex.EncodeToString(it.mTree.tree.MerkleRoot()))
 }
 
 // IsExists checks if the tree exists
-func (it *IncrementalTree) IsExists() bool {
+func (it *TreapTree) IsExists() bool {
 	if it.mTree.tree != nil {
 		return true
 	}
@@ -79,39 +98,23 @@ func (it *IncrementalTree) IsExists() bool {
 }
 
 // GenerateInclusionProof generates inclusion proof for the given pem certificate,
-// returns marshalled inclusion proof
-func (it *IncrementalTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
+// returns marshalled inclusion proof type that has boolean existence and bytes array
+// of siblings
+func (it *TreapTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
 	cert, err := utils.ParsePemKey(rawPemCert)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse pem key")
+		return nil, fmt.Errorf("failed to parse pem key: %w", err)
 	}
 
-	proof, err := it.mTree.GenInclusionProof(cert)
+	incProof, err := it.mTree.GenInclusionProof(cert)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to generate inclusion proof")
+		return nil, fmt.Errorf("failed to generate inclusion proof: %w", err)
 	}
 
-	res, err := json.Marshal(newInclusionProof(proof))
+	marshaledProof, err := json.Marshal(incProof)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal proof")
+		return nil, fmt.Errorf("failed to marshal proof %v: %w", incProof, err)
 	}
 
-	return res, nil
-}
-
-type inclusionProof struct {
-	Hashes []string `json:"hashes"`
-	Index  uint64   `json:"index"`
-}
-
-func newInclusionProof(proof *merkletree.Proof) *inclusionProof {
-	hashes := make([]string, len(proof.Hashes))
-	for i, hash := range proof.Hashes {
-		hashes[i] = hex.EncodeToString(hash)
-	}
-
-	return &inclusionProof{
-		Hashes: hashes,
-		Index:  proof.Index,
-	}
+	return marshaledProof, nil
 }
