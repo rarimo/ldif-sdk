@@ -1,6 +1,6 @@
 module github.com/rarimo/ldif-sdk
 
-go 1.21
+go 1.20
 
 require (
 	github.com/cosmos/cosmos-sdk v0.46.12
