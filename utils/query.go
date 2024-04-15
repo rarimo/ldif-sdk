@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/types/query"
@@ -54,7 +55,9 @@ func FetchHashLeavesFromCosmos(client cosmos.QueryClient) ([][]byte, error) {
 		}
 
 		for _, node := range resp.Tree {
-			bytesKey, err := hex.DecodeString(node.Key)
+			var bytesKey []byte
+
+			bytesKey, err := hex.DecodeString(strings.Replace(node.Key, "0x", "", -1))
 			if err != nil {
 				return nil, fmt.Errorf("failed to decode key %s: %w", node.Key, err)
 			}

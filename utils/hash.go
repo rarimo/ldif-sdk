@@ -24,7 +24,7 @@ var (
 )
 
 // HashCertificate hashes the public key of the certificate, calling PoseidonHashBig
-func HashCertificate(certificate *x509.Certificate) (*big.Int, error) {
+func HashCertificate(certificate *x509.Certificate) ([]byte, error) {
 	rsaPK, ok := certificate.PublicKey.(*rsa.PublicKey)
 	if !ok {
 		return nil, fmt.Errorf("%T: %w", certificate.PublicKey, ErrUnsupportedPublicKey)
@@ -35,7 +35,7 @@ func HashCertificate(certificate *x509.Certificate) (*big.Int, error) {
 
 // PoseidonHashBig hashes big raw data (256|384|512 bytes) with Poseidon hash function,
 // splitting data on chunks. The most common key length in CSCA list is 512 bytes.
-func PoseidonHashBig(raw []byte) (*big.Int, error) {
+func PoseidonHashBig(raw []byte) ([]byte, error) {
 	switch len(raw) {
 	case 256, 384, 512:
 	case ignoredKeyLength:
@@ -64,7 +64,7 @@ func PoseidonHashBig(raw []byte) (*big.Int, error) {
 		return nil, errors.Wrap(err, "failed to perform poseidon 4", logan.F{"chunks": hashedChunks})
 	}
 
-	return chunkHash, nil
+	return To32Bytes(chunkHash.Bytes()), nil
 }
 
 // convert bytes from chunkBytes to big integers, always returning chunksAmount slice

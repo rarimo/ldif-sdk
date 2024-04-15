@@ -31,7 +31,7 @@ func (h *certTree) BuildFromX509(certificates []*x509.Certificate) error {
 			continue
 		}
 
-		h.tree.Insert(certHash.Bytes(), derivePriority(certHash.Bytes()))
+		h.tree.Insert(certHash, derivePriority(certHash))
 	}
 
 	return nil
@@ -44,7 +44,7 @@ func (h *certTree) BuildFromRawPK(leaves []string) error {
 			return fmt.Errorf("hash leaf: %w", err)
 		}
 
-		h.tree.Insert(leafHash.Bytes(), derivePriority(leafHash.Bytes()))
+		h.tree.Insert(leafHash, derivePriority(leafHash))
 	}
 
 	return nil
@@ -64,7 +64,7 @@ func (h *certTree) GenInclusionProof(certificate *x509.Certificate) (*proof, err
 		return nil, errors.Wrap(err, "failed to hash certificate")
 	}
 
-	merklePath, orders := h.tree.MerklePath(certHash.Bytes())
+	merklePath, orders := h.tree.MerklePath(certHash)
 
 	return &proof{
 		Existence: true,
