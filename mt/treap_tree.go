@@ -39,47 +39,34 @@ func (t *Treap) Remove(key []byte) {
 	if t.Root == nil {
 		return
 	}
+	// Split the tree by key-1 => target key in the right subtree
+	// Split the subtree by key => target key is one left node
+	keyBig := new(big.Int).SetBytes(key)
+	keySub1 := new(big.Int).Sub(keyBig, big.NewInt(1)).Bytes()
 
-	t1, t2 := split(t.Root, key)
-	if t2 == nil {
+	left, right := split(t.Root, keySub1)
+	if right == nil {
 		return
 	}
 
-	if bytes.Equal(t2.Hash, key) {
-		t.Root = merge(t1, t2.Right)
-		return
-	}
-
-	node := t2
-	for {
-		if node.Left == nil {
-			return
-		}
-		if bytes.Equal(node.Left.Hash, key) {
-			node.Left = nil
-			updateNode(node)
-			break
-		}
-		node = node.Left
-	}
-
-	t.Root = merge(t1, t2)
+	_, right = split(right, key)
+	t.Root = merge(left, right)
 }
 
 func (t *Treap) Insert(key []byte, priority uint64) {
-	node := &Node{
+	middle := &Node{
 		Hash:       key,
 		MerkleHash: key,
 		Priority:   priority,
 	}
 
 	if t.Root == nil {
-		t.Root = node
+		t.Root = middle
 		return
 	}
 
-	t1, t2 := split(t.Root, key)
-	t.Root = merge(merge(t1, node), t2)
+	left, right := split(t.Root, key)
+	t.Root = merge(merge(left, middle), right)
 }
 
 func (t *Treap) MerklePath(key []byte) [][]byte {
@@ -121,37 +108,38 @@ func split(root *Node, key []byte) (*Node, *Node) {
 		return nil, nil
 	}
 
-	if bytes.Compare(root.Hash, key) < 0 {
-		t1, t2 := split(root.Right, key)
-		root.Right = t1
+	// Removal implementation relies on '<= 0'
+	if bytes.Compare(root.Hash, key) <= 0 {
+		left, right := split(root.Right, key)
+		root.Right = left
 		updateNode(root)
-		return root, t2
+		return root, right
 	}
 
-	t1, t2 := split(root.Left, key)
-	root.Left = t2
+	left, right := split(root.Left, key)
+	root.Left = right
 	updateNode(root)
-	return t1, root
+	return left, root
 }
 
-func merge(t1, t2 *Node) *Node {
-	if t1 == nil {
-		return t2
+func merge(left, right *Node) *Node {
+	if left == nil {
+		return right
 	}
 
-	if t2 == nil {
-		return t1
+	if right == nil {
+		return left
 	}
 
-	if t1.Priority > t2.Priority {
-		t1.Right = merge(t1.Right, t2)
-		updateNode(t1)
-		return t1
+	if left.Priority > right.Priority {
+		left.Right = merge(left.Right, right)
+		updateNode(left)
+		return left
 	}
 
-	t2.Left = merge(t1, t2.Left)
-	updateNode(t2)
-	return t2
+	right.Left = merge(left, right.Left)
+	updateNode(right)
+	return right
 }
 
 func updateNode(node *Node) {
@@ -165,8 +153,7 @@ func updateNode(node *Node) {
 }
 
 func hashNodes(a, b *Node) []byte {
-	var left []byte = nil
-	var right []byte = nil
+	var left, right []byte
 
 	if a != nil {
 		left = a.MerkleHash

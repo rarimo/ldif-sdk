@@ -118,12 +118,16 @@ func treapToList(treap *Treap) []string {
 }
 
 func printTree(treap *Treap) {
+	fmt.Println("=== Treap ===")
+
 	traverse(treap.Root, 0, func(node *Node, depth int) {
 		for i := 0; i < depth; i++ {
 			fmt.Print(" ")
 		}
-		fmt.Println(hex.EncodeToString(node.Hash))
+		fmt.Println(hex.EncodeToString(node.Hash), node.Priority)
 	})
+
+	fmt.Println("=============")
 }
 
 func traverse(node *Node, depth int, cb func(*Node, int)) {
