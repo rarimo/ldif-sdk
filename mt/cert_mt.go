@@ -18,30 +18,25 @@ func newCertTree() *certTree {
 }
 
 func (h *certTree) BuildFromX509(certificates []*x509.Certificate) error {
-	for _, certificate := range certificates {
-		certHash, err := utils.HashCertificate(certificate)
-		if err != nil {
-			if errs.Is(err, utils.ErrUnsupportedPublicKey) {
-				continue
-			}
-			return errors.Wrap(err, "failed to hash certificate")
-		}
-
-		if certHash == nil {
-			continue
-		}
-
-		h.tree.Insert(certHash, derivePriority(certHash))
+	pks, err := utils.ExtractPubKeys(certificates)
+	if err != nil {
+		return fmt.Errorf("extract public keys from certificates: %w", err)
 	}
 
-	return nil
+	return h.BuildFromRawPK(pks)
 }
 
-func (h *certTree) BuildFromRawPK(leaves []string) error {
+func (h *certTree) BuildFromRawPK(leaves [][]byte) error {
 	for _, leaf := range leaves {
-		leafHash, err := utils.PoseidonHashBig([]byte(leaf))
+		leafHash, err := utils.PoseidonHashBig(leaf)
 		if err != nil {
+			if errs.Is(err, utils.ErrInvalidLength) {
+				continue
+			}
 			return fmt.Errorf("hash leaf: %w", err)
+		}
+		if leafHash == nil {
+			continue
 		}
 
 		h.tree.Insert(leafHash, derivePriority(leafHash))

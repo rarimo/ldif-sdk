@@ -48,7 +48,12 @@ func BuildTree(elements []byte) (*TreapTree, error) {
 func BuildFromRaw(leaves []string) (*TreapTree, error) {
 	treapTree := newTreapTree()
 
-	err := treapTree.mTree.BuildFromRawPK(leaves)
+	rawKeys := make([][]byte, len(leaves))
+	for i, leave := range leaves {
+		rawKeys[i] = []byte(leave)
+	}
+
+	err := treapTree.mTree.BuildFromRawPK(rawKeys)
 	if err != nil {
 		return nil, fmt.Errorf("build from leaves: %w", err)
 	}
