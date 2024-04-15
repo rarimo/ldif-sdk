@@ -10,6 +10,11 @@ import (
 	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
+const (
+	SameHashOrder    = 0
+	ReverseHashOrder = 1
+)
+
 type Node struct {
 	Hash        []byte
 	Priority    uint64
@@ -20,7 +25,7 @@ type Node struct {
 type ITreap interface {
 	Remove(key []byte)
 	Insert(key []byte, priority uint64)
-	MerklePath(key []byte) [][]byte
+	MerklePath(key []byte) ([][]byte, []int)
 	MerkleRoot() []byte
 }
 
@@ -77,7 +82,7 @@ func (t *Treap) Insert(key []byte, priority uint64) {
 	t.Root = merge(merge(t1, node), t2)
 }
 
-func (t *Treap) MerklePath(key []byte) [][]byte {
+func (t *Treap) MerklePath(key []byte) ([][]byte, []int) {
 	node := t.Root
 	result := make([][]byte, 0, 64)
 
@@ -85,7 +90,7 @@ func (t *Treap) MerklePath(key []byte) [][]byte {
 		if bytes.Compare(node.Hash, key) == 0 {
 			result = append(result, hashNodes(node.Left, node.Right))
 			slices.Reverse(result)
-			return result
+			return result, buildOrders(result, key)
 		}
 
 		if bytes.Compare(node.Hash, key) > 0 {
@@ -104,7 +109,35 @@ func (t *Treap) MerklePath(key []byte) [][]byte {
 		node = node.Right
 	}
 
-	return nil
+	return nil, nil
+}
+
+func buildOrders(siblings [][]byte, key []byte) []int {
+	var (
+		builded = key
+		res     = make([]int, 0, len(siblings))
+	)
+
+	for _, sibling := range siblings {
+		order := getOrder(builded, sibling)
+		res = append(res, order)
+		if order == SameHashOrder {
+			builded = MustPoseidon(builded, sibling).Bytes()
+		}
+		if order == ReverseHashOrder {
+			builded = MustPoseidon(sibling, builded).Bytes()
+		}
+	}
+
+	return res
+}
+
+func getOrder(a, b []byte) int {
+	if bytes.Compare(a, b) < 0 {
+		return SameHashOrder
+	}
+
+	return ReverseHashOrder
 }
 
 func (t *Treap) MerkleRoot() []byte {
