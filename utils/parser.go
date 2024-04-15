@@ -45,3 +45,12 @@ func ParsePemKey(rawPemKey string) (*x509.Certificate, error) {
 
 	return parsedPem, nil
 }
+
+func To32Bytes(arr []byte) []byte {
+	if len(arr) >= 32 {
+		return arr
+	}
+
+	res := make([]byte, 32-len(arr))
+	return append(res, arr...)
+}

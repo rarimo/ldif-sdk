@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/rarimo/ldif-sdk/utils"
 )
 
 const (
@@ -114,10 +115,10 @@ func buildOrders(siblings [][]byte, key []byte) []int {
 		order := getOrder(builded, sibling)
 		res = append(res, order)
 		if order == SameHashOrder {
-			builded = MustPoseidon(builded, sibling).Bytes()
+			builded = MustPoseidon(builded, sibling)
 		}
 		if order == ReverseHashOrder {
-			builded = MustPoseidon(sibling, builded).Bytes()
+			builded = MustPoseidon(sibling, builded)
 		}
 	}
 
@@ -133,6 +134,10 @@ func getOrder(a, b []byte) int {
 }
 
 func (t *Treap) MerkleRoot() []byte {
+	if t.Root == nil {
+		return nil
+	}
+
 	return t.Root.MerkleHash
 }
 
@@ -203,7 +208,7 @@ func hashNodes(a, b *Node) []byte {
 // function panics if MustPoseidon fails
 func derivePriority(key []byte) uint64 {
 	var (
-		keyHash = new(big.Int).SetBytes(MustPoseidon(key).Bytes())
+		keyHash = new(big.Int).SetBytes(MustPoseidon(key))
 		u64     = new(big.Int).SetUint64(math.MaxUint64)
 	)
 
@@ -221,17 +226,17 @@ func hash(a, b []byte) []byte {
 	}
 
 	if bytes.Compare(a, b) < 0 {
-		return MustPoseidon([][]byte{a, b}...).Bytes()
+		return MustPoseidon([][]byte{a, b}...)
 	}
 
-	return MustPoseidon([][]byte{b, a}...).Bytes()
+	return MustPoseidon([][]byte{b, a}...)
 }
 
 // MustPoseidon performs Poseidon hashing, but panics when error in
 // poseidon.Hash occurs, error may be in case if:
 //  1. invalid array length (0 or ... > 16)
 //  2. any value is not in finite field of constants.Q
-func MustPoseidon(inputs ...[]byte) *big.Int {
+func MustPoseidon(inputs ...[]byte) []byte {
 	bigInputs := make([]*big.Int, len(inputs))
 	for i := 0; i < len(inputs); i++ {
 		bigInputs[i] = new(big.Int).SetBytes(inputs[i])
@@ -242,5 +247,5 @@ func MustPoseidon(inputs ...[]byte) *big.Int {
 		panic(fmt.Errorf("failed to hash poseidon %v: %w", bigInputs, err))
 	}
 
-	return inputsHash
+	return utils.To32Bytes(inputsHash.Bytes())
 }

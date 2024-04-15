@@ -18,33 +18,28 @@ func newCertTree() *certTree {
 }
 
 func (h *certTree) BuildFromX509(certificates []*x509.Certificate) error {
-	for _, certificate := range certificates {
-		certHash, err := utils.HashCertificate(certificate)
+	pks, err := utils.ExtractPubKeys(certificates)
+	if err != nil {
+		return fmt.Errorf("extract public keys from certificates: %w", err)
+	}
+
+	return h.BuildFromRawPK(pks)
+}
+
+func (h *certTree) BuildFromRawPK(leaves [][]byte) error {
+	for _, leaf := range leaves {
+		leafHash, err := utils.PoseidonHashBig(leaf)
 		if err != nil {
-			if errs.Is(err, utils.ErrUnsupportedPublicKey) {
+			if errs.Is(err, utils.ErrInvalidLength) {
 				continue
 			}
-			return errors.Wrap(err, "failed to hash certificate")
+			return fmt.Errorf("hash leaf: %w", err)
 		}
-
-		if certHash == nil {
+		if leafHash == nil {
 			continue
 		}
 
-		h.tree.Insert(certHash.Bytes(), derivePriority(certHash.Bytes()))
-	}
-
-	return nil
-}
-
-func (h *certTree) BuildFromRawPK(leaves []string) error {
-	for _, leaf := range leaves {
-		leafHash, err := utils.PoseidonHashBig([]byte(leaf))
-		if err != nil {
-			return fmt.Errorf("hash leaf: %w", err)
-		}
-
-		h.tree.Insert(leafHash.Bytes(), derivePriority(leafHash.Bytes()))
+		h.tree.Insert(leafHash, derivePriority(leafHash))
 	}
 
 	return nil
@@ -64,7 +59,7 @@ func (h *certTree) GenInclusionProof(certificate *x509.Certificate) (*proof, err
 		return nil, errors.Wrap(err, "failed to hash certificate")
 	}
 
-	merklePath, orders := h.tree.MerklePath(certHash.Bytes())
+	merklePath, orders := h.tree.MerklePath(certHash)
 
 	return &proof{
 		Existence: true,

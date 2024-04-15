@@ -48,7 +48,12 @@ func BuildTree(elements []byte) (*TreapTree, error) {
 func BuildFromRaw(leaves []string) (*TreapTree, error) {
 	treapTree := newTreapTree()
 
-	err := treapTree.mTree.BuildFromRawPK(leaves)
+	rawKeys := make([][]byte, len(leaves))
+	for i, leave := range leaves {
+		rawKeys[i] = []byte(leave)
+	}
+
+	err := treapTree.mTree.BuildFromRawPK(rawKeys)
 	if err != nil {
 		return nil, fmt.Errorf("build from leaves: %w", err)
 	}
@@ -81,7 +86,7 @@ func BuildFromCosmos(addr string, isSecure bool) (*TreapTree, error) {
 
 // Root returns merkle tree root, if there is no tree empty string returned
 func (it *TreapTree) Root() string {
-	if it.mTree.tree == nil {
+	if it.mTree.tree == nil || it.mTree.tree.MerkleRoot() == nil {
 		return ""
 	}
 
@@ -90,7 +95,7 @@ func (it *TreapTree) Root() string {
 
 // IsExists checks if the tree exists
 func (it *TreapTree) IsExists() bool {
-	if it.mTree.tree != nil {
+	if it.mTree.tree != nil || it.mTree.tree.MerkleRoot() != nil {
 		return true
 	}
 
