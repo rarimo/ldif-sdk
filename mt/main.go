@@ -81,7 +81,7 @@ func BuildFromCosmos(addr string, isSecure bool) (*TreapTree, error) {
 
 // Root returns merkle tree root, if there is no tree empty string returned
 func (it *TreapTree) Root() string {
-	if it.mTree.tree == nil {
+	if it.mTree.tree == nil || it.mTree.tree.MerkleRoot() == nil {
 		return ""
 	}
 
@@ -90,7 +90,7 @@ func (it *TreapTree) Root() string {
 
 // IsExists checks if the tree exists
 func (it *TreapTree) IsExists() bool {
-	if it.mTree.tree != nil {
+	if it.mTree.tree != nil || it.mTree.tree.MerkleRoot() != nil {
 		return true
 	}
 

@@ -134,6 +134,10 @@ func getOrder(a, b []byte) int {
 }
 
 func (t *Treap) MerkleRoot() []byte {
+	if t.Root == nil {
+		return nil
+	}
+
 	return t.Root.MerkleHash
 }
 
