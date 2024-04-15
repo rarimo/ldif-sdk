@@ -1,56 +1,111 @@
 package mt
 
 import (
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"testing"
-	"time"
 
-	"github.com/cosmos/cosmos-sdk/types/query"
-	cosmos "github.com/rarimo/ldif-sdk/cosmos/pkg/types"
 	"github.com/rarimo/ldif-sdk/ldif"
 	"github.com/rarimo/ldif-sdk/utils"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
+	"github.com/stretchr/testify/assert"
 )
 
-func Test(t *testing.T) {
-	ldif, err := ldif.FromFile("icao-list.ldif")
+const (
+	expectedRoot = "0x0bb55cd80542e0a6dfc0347c56c5fe6d7eb7bc844cab709afbd082aa94d58077"
+	RarimoGRPC   = "localhost:9090"
+	ldifPath     = "icao-list.ldif"
+)
+
+func TestFromRawX509(t *testing.T) {
+	data, err := ldif.FromFile(ldifPath)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(fmt.Errorf("reading LDIF file %w", err))
 	}
 
-	input, err := json.Marshal(ldif.ToPem())
+	rawCertificates, err := json.Marshal(data.ToPem())
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(fmt.Errorf("marshalling certificates %w", err))
 	}
 
-	tree, err := BuildTree(input)
+	tree, err := BuildTree(rawCertificates)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
 
-	include := ldif.ToPem()[150]
-	rawProof, err := tree.GenerateInclusionProof(include)
+	assert.Equal(t, tree.Root(), expectedRoot)
+}
+
+func TestFromRawPKs(t *testing.T) {
+	data, err := ldif.FromFile(ldifPath)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(fmt.Errorf("reading LDIF file %w", err))
+	}
+
+	pks, err := data.RawPubKeys()
+	if err != nil {
+		t.Fatal(fmt.Errorf("extracting public keys %w", err))
+	}
+
+	leaves := make([]string, len(pks))
+	for i, pk := range pks {
+		leaves[i] = string(pk)
+	}
+
+	tree, err := BuildFromRaw(leaves)
+	if err != nil {
+		t.Fatal(fmt.Errorf("building tree %w", err))
+	}
+
+	assert.Equal(t, tree.Root(), expectedRoot)
+}
+
+// NOTE: TestFromCosmos will work only with connection to Rarimo gRPC
+// with CSCA_ROOT_UPDATE proposal in order to have anything to build
+// tree from.
+func TestFromCosmos(t *testing.T) {
+	tree, err := BuildFromCosmos(RarimoGRPC, false)
+	if err != nil {
+		t.Fatal(fmt.Errorf("failed to build tree from cosmos %w", err))
+	}
+
+	//Use your own root, that is stored on-chain
+	assert.Equal(t, tree.Root(), "0x27e82c55bfbeba5ddb1b741a129ed9c6f97220ee4f47b0a77fa7fb0c5f4c7a54")
+}
+
+func TestVerifyProof(t *testing.T) {
+	data, err := ldif.FromFile(ldifPath)
+	if err != nil {
+		t.Fatal(fmt.Errorf("reading LDIF file %w", err))
+	}
+
+	pems := data.ToPem()
+	rawCertificates, err := json.Marshal(pems)
+	if err != nil {
+		t.Fatal(fmt.Errorf("marshalling certificates %w", err))
+	}
+
+	tree, err := BuildTree(rawCertificates)
+	if err != nil {
+		t.Fatal(fmt.Errorf("building tree %w", err))
+	}
+
+	rawProof, err := tree.GenerateInclusionProof(pems[150])
+	if err != nil {
+		t.Fatal(fmt.Errorf("genereting inclusion proof %w", err))
 	}
 
 	var incProof proof
 	if err := json.Unmarshal(rawProof, &incProof); err != nil {
-		t.Fatal(err)
+		t.Fatal(fmt.Errorf("unmarshalling proof %w", err))
 	}
 
-	fmt.Println(tree.Root())
-	root, err := buildRoot(include, incProof)
+	recoveredRoot, err := buildRoot(pems[150], incProof)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal(fmt.Errorf("building root from proof: %w", err))
 	}
-	fmt.Println(root)
 
+	assert.Equal(t, tree.Root(), recoveredRoot)
 }
 
 func buildRoot(input string, incProof proof) (string, error) {
@@ -72,41 +127,9 @@ func buildRoot(input string, incProof proof) (string, error) {
 		case ReverseHashOrder:
 			calculated = MustPoseidon([][]byte{sibling, calculated}...)
 		default:
-			fmt.Println("lox")
 			continue
 		}
 	}
 
 	return fmt.Sprintf("0x%s", hex.EncodeToString(calculated)), nil
-}
-
-func TestCosmos(t *testing.T) {
-	tree, err := BuildFromCosmos("localhost:9090", false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	creds := grpc.WithTransportCredentials(insecure.NewCredentials())
-	grpcClient, err := grpc.Dial("localhost:9090", creds, grpc.WithKeepaliveParams(keepalive.ClientParameters{
-		Time:    10 * time.Second, // wait time before ping if no activity
-		Timeout: 20 * time.Second, // ping timeout
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := cosmos.NewQueryClient(grpcClient).Tree(context.Background(), &cosmos.QueryTreeRequest{
-		Pagination: &query.PageRequest{
-			//If we can fetch any tree with such key -> root is okay
-			Key:   tree.mTree.tree.MerkleRoot(),
-			Limit: 1,
-		},
-	}, grpc.EmptyCallOption{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	fmt.Println(resp)
-
-	fmt.Println(tree.Root())
 }
