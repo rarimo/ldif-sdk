@@ -2,6 +2,7 @@ package mt
 
 import (
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,40 +50,51 @@ func TestTreap_Insert(t *testing.T) {
 	treap := buildTreap()
 	list := treapToList(treap)
 	for i, node := range list {
-		assert.Equal(t, shouldBeBuilt[i], hex.EncodeToString(node.Hash))
+		assert.Equal(t, shouldBeBuilt[i], node)
 	}
+
+	printTree(treap)
 }
 
 func TestTreap_Remove(t *testing.T) {
-	shouldBeRemoved := map[string]struct{}{
-		"15f19af55d5d29b82570ec8a8cdb79286719e2d11de811da71d6871874365f93": {},
-		"28815c9a1c9d638886d6ac193df55f98824c491d09bbbd712f96b5adfeba742e": {},
-		"201c77fa8749ec28af53e24913e5bde201e6a7816c0b6e229b9191724ce46a45": {},
-		"27b9c329d9f56b94c3a1d8dc84f2b8e2e0feb636fbc5f6df1474c601e8b979be": {},
-		"022e071cf4eed456dc7f3a36b7b190c6a1f991ef8c5809f612cb193e9c28af78": {},
-		"14d4892218a45bef768d6e148825e647729c4f273a4ec038715c33581e2361e8": {},
+	shouldBeRemoved := []string{
+		"15f19af55d5d29b82570ec8a8cdb79286719e2d11de811da71d6871874365f93",
+		"28815c9a1c9d638886d6ac193df55f98824c491d09bbbd712f96b5adfeba742e",
+		"201c77fa8749ec28af53e24913e5bde201e6a7816c0b6e229b9191724ce46a45",
+		"27b9c329d9f56b94c3a1d8dc84f2b8e2e0feb636fbc5f6df1474c601e8b979be",
+		"022e071cf4eed456dc7f3a36b7b190c6a1f991ef8c5809f612cb193e9c28af78",
+		"14d4892218a45bef768d6e148825e647729c4f273a4ec038715c33581e2361e8",
+	}
+
+	shouldBeRemovedMap := make(map[string]struct{}, len(shouldBeRemoved))
+	for _, node := range shouldBeRemoved {
+		shouldBeRemovedMap[node] = struct{}{}
 	}
 
 	shouldRemain := make([]string, 0, len(leavesToInsert)-len(shouldBeRemoved))
 	for _, toIns := range leavesToInsert {
-		if _, ok := shouldBeRemoved[toIns]; !ok {
+		if _, ok := shouldBeRemovedMap[toIns]; !ok {
 			shouldRemain = append(shouldRemain, toIns)
 		}
 	}
 
 	treap := buildTreap()
-	for toRm := range shouldBeRemoved {
+	for _, toRm := range shouldBeRemoved {
 		bytes, _ := hex.DecodeString(toRm)
-		treap.Remove(bytes) // now breaks on recursion
+		treap.Remove(bytes)
 	}
-	// how will orphan nodes work in this case?
+
 	list := treapToList(treap)
-	for _, node := range list {
-		assert.Contains(t, shouldRemain, hex.EncodeToString(node.Hash))
+	assert.Len(t, list, len(shouldRemain))
+	for _, remaining := range shouldRemain {
+		assert.Contains(t, list, remaining)
 	}
-	for _, node := range list {
-		assert.NotContains(t, shouldBeRemoved, hex.EncodeToString(node.Hash))
+
+	for _, removed := range shouldBeRemoved {
+		assert.NotContains(t, list, removed)
 	}
+
+	printTree(treap)
 }
 
 func buildTreap() *Treap {
@@ -95,19 +107,31 @@ func buildTreap() *Treap {
 	return treap
 }
 
-func treapToList(treap *Treap) []Node {
-	list := make([]Node, 0, 16)
+func treapToList(treap *Treap) []string {
+	list := make([]string, 0, 16)
 
-	var traverse func(node *Node)
-	traverse = func(node *Node) {
-		if node == nil {
-			return
+	traverse(treap.Root, 0, func(node *Node, _ int) {
+		list = append(list, hex.EncodeToString(node.Hash))
+	})
+
+	return list
+}
+
+func printTree(treap *Treap) {
+	traverse(treap.Root, 0, func(node *Node, depth int) {
+		for i := 0; i < depth; i++ {
+			fmt.Print(" ")
 		}
-		list = append(list, *node)
-		traverse(node.Left)
-		traverse(node.Right)
+		fmt.Println(hex.EncodeToString(node.Hash))
+	})
+}
+
+func traverse(node *Node, depth int, cb func(*Node, int)) {
+	if node == nil {
+		return
 	}
 
-	traverse(treap.Root)
-	return list
+	cb(node, depth)
+	traverse(node.Left, depth+1, cb)
+	traverse(node.Right, depth+1, cb)
 }

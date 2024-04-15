@@ -60,7 +60,6 @@ func (t *Treap) Remove(key []byte) {
 			updateNode(node)
 			break
 		}
-
 		node = node.Left
 	}
 
