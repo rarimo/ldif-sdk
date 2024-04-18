@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"slices"
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/rarimo/ldif-sdk/utils"
@@ -82,7 +81,7 @@ func (t *Treap) MerklePath(key []byte) ([][]byte, []int) {
 	for node != nil {
 		if bytes.Compare(node.Hash, key) == 0 {
 			result = append(result, hashNodes(node.Left, node.Right))
-			slices.Reverse(result)
+			reverseSlice(result)
 			return result, buildOrders(result, key)
 		}
 
@@ -248,4 +247,10 @@ func MustPoseidon(inputs ...[]byte) []byte {
 	}
 
 	return utils.To32Bytes(inputsHash.Bytes())
+}
+
+func reverseSlice[S ~[]E, E any](s S) {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
 }
