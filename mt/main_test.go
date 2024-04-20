@@ -121,6 +121,9 @@ func buildRoot(input string, incProof proof) (string, error) {
 
 	calculated := certHash
 	for i, sibling := range incProof.Siblings {
+		if len(sibling) == 0 {
+			continue
+		}
 		switch incProof.Order[i] {
 		case SameHashOrder:
 			calculated = MustPoseidon([][]byte{calculated, sibling}...)
