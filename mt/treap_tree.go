@@ -139,7 +139,7 @@ func fillTreeHeight(siblings *[][]byte) {
 }
 
 func getOrder(a, b []byte) int {
-	if bytes.Compare(a, b) < 0 || len(b) == 0 {
+	if bytes.Compare(a, b) < 0 {
 		return SameHashOrder
 	}
 
