@@ -113,8 +113,14 @@ func buildOrders(siblings [][]byte, key []byte) []int {
 	)
 
 	for _, sibling := range siblings {
+		if len(sibling) == 0 {
+			res = append(res, SameHashOrder)
+			continue
+		}
+
 		order := getOrder(builded, sibling)
 		res = append(res, order)
+
 		if order == SameHashOrder {
 			builded = MustPoseidon(builded, sibling)
 		}
