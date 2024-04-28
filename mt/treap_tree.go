@@ -13,6 +13,7 @@ import (
 const (
 	SameHashOrder    = 0
 	ReverseHashOrder = 1
+	TreeHeight       = 16
 )
 
 type Node struct {
@@ -76,12 +77,13 @@ func (t *Treap) Insert(key []byte, priority uint64) {
 
 func (t *Treap) MerklePath(key []byte) ([][]byte, []int) {
 	node := t.Root
-	result := make([][]byte, 0, 64)
+	result := make([][]byte, 0, TreeHeight)
 
 	for node != nil {
 		if bytes.Compare(node.Hash, key) == 0 {
 			result = append(result, hashNodes(node.Left, node.Right))
 			reverseSlice(result)
+			fillTreeHeight(&result)
 			return result, buildOrders(result, key)
 		}
 
@@ -111,8 +113,14 @@ func buildOrders(siblings [][]byte, key []byte) []int {
 	)
 
 	for _, sibling := range siblings {
+		if len(sibling) == 0 {
+			res = append(res, SameHashOrder)
+			continue
+		}
+
 		order := getOrder(builded, sibling)
 		res = append(res, order)
+
 		if order == SameHashOrder {
 			builded = MustPoseidon(builded, sibling)
 		}
@@ -122,6 +130,12 @@ func buildOrders(siblings [][]byte, key []byte) []int {
 	}
 
 	return res
+}
+
+func fillTreeHeight(siblings *[][]byte) {
+	for i := len(*siblings); i < cap(*siblings); i++ {
+		*siblings = append(*siblings, []byte{})
+	}
 }
 
 func getOrder(a, b []byte) int {

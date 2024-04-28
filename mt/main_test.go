@@ -90,7 +90,8 @@ func TestVerifyProof(t *testing.T) {
 		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
 
-	rawProof, err := tree.GenerateInclusionProof(pems[150])
+	pemToTest := pems[30]
+	rawProof, err := tree.GenerateInclusionProof(pemToTest)
 	if err != nil {
 		t.Fatal(fmt.Errorf("genereting inclusion proof %w", err))
 	}
@@ -100,7 +101,7 @@ func TestVerifyProof(t *testing.T) {
 		t.Fatal(fmt.Errorf("unmarshalling proof %w", err))
 	}
 
-	recoveredRoot, err := buildRoot(pems[150], incProof)
+	recoveredRoot, err := buildRoot(pemToTest, incProof)
 	if err != nil {
 		t.Fatal(fmt.Errorf("building root from proof: %w", err))
 	}
@@ -121,6 +122,9 @@ func buildRoot(input string, incProof proof) (string, error) {
 
 	calculated := certHash
 	for i, sibling := range incProof.Siblings {
+		if len(sibling) == 0 {
+			continue
+		}
 		switch incProof.Order[i] {
 		case SameHashOrder:
 			calculated = MustPoseidon([][]byte{calculated, sibling}...)
