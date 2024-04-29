@@ -54,3 +54,18 @@ func To32Bytes(arr []byte) []byte {
 	res := make([]byte, 32-len(arr))
 	return append(res, arr...)
 }
+
+func ParseCertificatesCollection(data []byte) ([]*x509.Certificate, error) {
+	certificates := make([]*x509.Certificate, 0)
+
+	for block, rest := pem.Decode(data); block != nil; block, rest = pem.Decode(rest) {
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil && !errs.As(err, &x509.NonFatalErrors{}) {
+			return nil, errors.Wrap(err, "failed to parse certificate")
+		}
+
+		certificates = append(certificates, cert)
+	}
+
+	return certificates, nil
+}

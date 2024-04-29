@@ -20,9 +20,9 @@ func newTreapTree() *TreapTree {
 	}
 }
 
-// BuildTree builds a new dynamic Merkle tree with treap data structure
-// from raw pem X.509 certificates array marshalled in JSON
-func BuildTree(elements []byte) (*TreapTree, error) {
+// BuildTreeFromMarshalled builds a new dynamic Merkle tree with treap data structure
+// from raw pem certificates array marshalled in JSON,
+func BuildTreeFromMarshalled(elements []byte) (*TreapTree, error) {
 	treapTree := newTreapTree()
 
 	pemKeys := make([]string, 0)
@@ -31,6 +31,32 @@ func BuildTree(elements []byte) (*TreapTree, error) {
 	}
 
 	certificates, err := utils.ParsePemKeys(pemKeys)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parse raw pem elements")
+	}
+
+	err = treapTree.mTree.BuildFromX509(certificates)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to build tree")
+	}
+
+	return treapTree, nil
+}
+
+// BuildTreeFromCollection builds a new dynamic Merkle tree with treap data structure
+// from raw pem certificates, that looks like:
+// -----BEGIN CERTIFICATE-----
+// ...
+// QLIlpAZJZAlpPxwCIFlPFYmq4UcD6I5HJzTUvTRR1oMlYqwBC7SjwtwyspKc
+// ...
+// -----END CERTIFICATE-----
+// -----BEGIN CERTIFICATE-----
+// ...
+// MIIDKzCCAtCgAwIBAgIII+3Lgsfb3yUwCgYIKoZIzj0EAwIweTEUMBIGA1UEAwwL
+func BuildTreeFromCollection(data []byte) (*TreapTree, error) {
+	treapTree := newTreapTree()
+
+	certificates, err := utils.ParseCertificatesCollection(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parse raw pem elements")
 	}

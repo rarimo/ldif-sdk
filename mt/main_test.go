@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/rarimo/ldif-sdk/ldif"
@@ -12,10 +13,25 @@ import (
 )
 
 const (
-	expectedRoot = "0x0bb55cd80542e0a6dfc0347c56c5fe6d7eb7bc844cab709afbd082aa94d58077"
-	RarimoGRPC   = "localhost:9090"
-	ldifPath     = "icao-list.ldif"
+	expectedRoot   = "0x0bb55cd80542e0a6dfc0347c56c5fe6d7eb7bc844cab709afbd082aa94d58077"
+	RarimoGRPC     = "localhost:9090"
+	ldifPath       = "icao-list.ldif"
+	masterListPath = "masterlist.pem"
 )
+
+func TestFromCollection(t *testing.T) {
+	data, err := os.ReadFile(masterListPath)
+	if err != nil {
+		t.Fatal(fmt.Errorf("reading pem file %w", err))
+	}
+
+	tree, err := BuildTreeFromCollection(data)
+	if err != nil {
+		t.Fatal(fmt.Errorf("building tree %w", err))
+	}
+
+	assert.Equal(t, tree.Root(), "0x0bb55cd80542e0a6dfc0347c56c5fe6d7eb7bc844cab709afbd082aa94d58077")
+}
 
 func TestFromRawX509(t *testing.T) {
 	data, err := ldif.FromFile(ldifPath)
@@ -28,7 +44,7 @@ func TestFromRawX509(t *testing.T) {
 		t.Fatal(fmt.Errorf("marshalling certificates %w", err))
 	}
 
-	tree, err := BuildTree(rawCertificates)
+	tree, err := BuildTreeFromMarshalled(rawCertificates)
 	if err != nil {
 		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
@@ -85,7 +101,7 @@ func TestVerifyProof(t *testing.T) {
 		t.Fatal(fmt.Errorf("marshalling certificates %w", err))
 	}
 
-	tree, err := BuildTree(rawCertificates)
+	tree, err := BuildTreeFromMarshalled(rawCertificates)
 	if err != nil {
 		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
