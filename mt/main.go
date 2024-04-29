@@ -1,7 +1,6 @@
 package mt
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -111,12 +110,12 @@ func BuildFromCosmos(addr string, isSecure bool) (*TreapTree, error) {
 }
 
 // Root returns merkle tree root, if there is no tree empty string returned
-func (it *TreapTree) Root() string {
+func (it *TreapTree) Root() []byte {
 	if it.mTree.tree == nil || it.mTree.tree.MerkleRoot() == nil {
-		return ""
+		return []byte{}
 	}
 
-	return fmt.Sprintf("0x%s", hex.EncodeToString(it.mTree.tree.MerkleRoot()))
+	return it.mTree.tree.MerkleRoot()
 }
 
 // IsExists checks if the tree exists
@@ -131,7 +130,7 @@ func (it *TreapTree) IsExists() bool {
 // GenerateInclusionProof generates inclusion proof for the given pem certificate,
 // returns marshalled inclusion proof type that has boolean existence and bytes array
 // of siblings
-func (it *TreapTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
+func (it *TreapTree) GenerateInclusionProof(rawPemCert string) (*Proof, error) {
 	cert, err := utils.ParsePemKey(rawPemCert)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse pem key: %w", err)
@@ -142,10 +141,5 @@ func (it *TreapTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to generate inclusion proof: %w", err)
 	}
 
-	marshaledProof, err := json.Marshal(incProof)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal proof %v: %w", incProof, err)
-	}
-
-	return marshaledProof, nil
+	return incProof, nil
 }

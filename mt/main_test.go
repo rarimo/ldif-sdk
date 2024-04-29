@@ -30,7 +30,7 @@ func TestFromCollection(t *testing.T) {
 		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
 
-	assert.Equal(t, tree.Root(), "0x0bb55cd80542e0a6dfc0347c56c5fe6d7eb7bc844cab709afbd082aa94d58077")
+	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), "0x0169fe5341e6672b7343a288e6bd809bfee92b8638e18875dc834504640d4915")
 }
 
 func TestFromRawX509(t *testing.T) {
@@ -49,7 +49,7 @@ func TestFromRawX509(t *testing.T) {
 		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
 
-	assert.Equal(t, tree.Root(), expectedRoot)
+	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), expectedRoot)
 }
 
 func TestFromRawPKs(t *testing.T) {
@@ -73,7 +73,7 @@ func TestFromRawPKs(t *testing.T) {
 		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
 
-	assert.Equal(t, tree.Root(), expectedRoot)
+	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), expectedRoot)
 }
 
 // NOTE: TestFromCosmos will work only with connection to Rarimo gRPC
@@ -86,7 +86,7 @@ func TestFromCosmos(t *testing.T) {
 	}
 
 	//Use your own root, that is stored on-chain
-	assert.Equal(t, tree.Root(), "0x27e82c55bfbeba5ddb1b741a129ed9c6f97220ee4f47b0a77fa7fb0c5f4c7a54")
+	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), "0x27e82c55bfbeba5ddb1b741a129ed9c6f97220ee4f47b0a77fa7fb0c5f4c7a54")
 }
 
 func TestVerifyProof(t *testing.T) {
@@ -107,25 +107,20 @@ func TestVerifyProof(t *testing.T) {
 	}
 
 	pemToTest := pems[30]
-	rawProof, err := tree.GenerateInclusionProof(pemToTest)
+	incProof, err := tree.GenerateInclusionProof(pemToTest)
 	if err != nil {
 		t.Fatal(fmt.Errorf("genereting inclusion proof %w", err))
 	}
 
-	var incProof proof
-	if err := json.Unmarshal(rawProof, &incProof); err != nil {
-		t.Fatal(fmt.Errorf("unmarshalling proof %w", err))
-	}
-
-	recoveredRoot, err := buildRoot(pemToTest, incProof)
+	recoveredRoot, err := buildRoot(pemToTest, *incProof)
 	if err != nil {
 		t.Fatal(fmt.Errorf("building root from proof: %w", err))
 	}
 
-	assert.Equal(t, tree.Root(), recoveredRoot)
+	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), recoveredRoot)
 }
 
-func buildRoot(input string, incProof proof) (string, error) {
+func buildRoot(input string, incProof Proof) (string, error) {
 	cert, err := utils.ParsePemKey(input)
 	if err != nil {
 		return "", err
