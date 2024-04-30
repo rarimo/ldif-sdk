@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	expectedRoot   = "0x0bb55cd80542e0a6dfc0347c56c5fe6d7eb7bc844cab709afbd082aa94d58077"
+	expectedRoot   = "0x0251f2113111ff098acc87250d9add6ffefc882062c1446974a6302911f8a9a1"
 	RarimoGRPC     = "localhost:9090"
 	ldifPath       = "icao-list.ldif"
 	masterListPath = "masterlist.pem"
@@ -30,7 +30,7 @@ func TestFromCollection(t *testing.T) {
 		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
 
-	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), "0x0169fe5341e6672b7343a288e6bd809bfee92b8638e18875dc834504640d4915")
+	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), "0x16ae4b942a9d6fd6576e2fb5a214c2a1a10e00ec9713fe23536c99065bb18c35")
 }
 
 func TestFromRawX509(t *testing.T) {

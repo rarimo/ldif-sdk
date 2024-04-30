@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	byteSize       = 64
 	chunksAmount   = 64
 	subChunkAmount = 16 // = len(poseidon.NROUNDSP)
 	// ZKP circuits do not support 768 bits keys, now there are only 8 keys with this length
@@ -67,26 +68,28 @@ func PoseidonHashBig(raw []byte) ([]byte, error) {
 	return To32Bytes(chunkHash.Bytes()), nil
 }
 
-// convert bytes from chunkBytes to big integers, always returning chunksAmount slice
 func splitBytes(rsaN []byte) []*big.Int {
-	chunkedPubKey := chunkBytes(rsaN, len(rsaN)/chunksAmount)
-
-	splitedPubKey := make([]*big.Int, len(chunkedPubKey))
-	for i, bytes := range chunkedPubKey {
-		splitedPubKey[i] = new(big.Int).SetBytes(bytes)
-	}
-
-	return splitedPubKey
+	return chunkBytes(byteSize, chunksAmount, new(big.Int).SetBytes(rsaN))
 }
 
-// divide slice to chunks of size chunkSize
-func chunkBytes(data []byte, chunkSize int) [][]byte {
-	chunks := make([][]byte, 0, len(data)/chunkSize)
+// chunkBytes splits an `x` N parameter from public key into k chunks amount using
+// n as byte size
+func chunkBytes(n, k int, x *big.Int) []*big.Int {
+	var (
+		bigTwo = big.NewInt(2)
+		mod    = big.NewInt(1)
+		chunks = make([]*big.Int, k)
+	)
 
-	for chunkSize < len(data) {
-		chunks = append(chunks, data[0:chunkSize])
-		data = data[chunkSize:]
+	for idx := 0; idx < n; idx++ {
+		mod = new(big.Int).Mul(mod, bigTwo)
 	}
 
-	return append(chunks, data)
+	xTemp := x
+	for idx := 0; idx < k; idx++ {
+		chunks[idx] = new(big.Int).Mod(xTemp, mod)
+		xTemp = new(big.Int).Div(xTemp, mod)
+	}
+
+	return chunks
 }
