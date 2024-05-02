@@ -16,6 +16,10 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
+type treeClient interface {
+	Tree(context.Context, *cosmos.QueryTreeRequest, ...grpc.CallOption) (*cosmos.QueryTreeResponse, error)
+}
+
 func NewGRPCClient(addr string, isSecure bool) (*grpc.ClientConn, error) {
 	creds := grpc.WithTransportCredentials(insecure.NewCredentials())
 	if isSecure {
@@ -35,7 +39,7 @@ func NewGRPCClient(addr string, isSecure bool) (*grpc.ClientConn, error) {
 	return grpcClient, nil
 }
 
-func FetchHashLeavesFromCosmos(client cosmos.QueryClient) ([][]byte, error) {
+func FetchHashLeavesFromCosmos(client treeClient) ([][]byte, error) {
 	var (
 		limit  = uint64(100)
 		offset = uint64(0)
