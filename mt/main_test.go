@@ -1,6 +1,7 @@
 package mt
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -133,14 +134,14 @@ func buildRoot(input string, incProof Proof) (string, error) {
 	}
 
 	calculated := certHash
-	for i, sibling := range incProof.Siblings {
+	for _, sibling := range incProof.Siblings {
 		if len(sibling) == 0 {
 			continue
 		}
-		switch incProof.Order[i] {
-		case SameHashOrder:
+
+		if bytes.Compare(calculated, sibling) < 0 {
 			calculated = keccak256.Hash(calculated, sibling)
-		case ReverseHashOrder:
+		} else {
 			calculated = keccak256.Hash(sibling, calculated)
 		}
 	}

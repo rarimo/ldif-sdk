@@ -49,12 +49,11 @@ func (h *certTree) GenInclusionProof(certificate *x509.Certificate) (*Proof, err
 		return nil, errors.Wrap(err, "failed to hash certificate")
 	}
 
-	merklePath, orders := h.tree.MerklePath(certHash)
+	merklePath := h.tree.MerklePath(certHash)
 
 	return &Proof{
 		Existence: true,
 		Siblings:  merklePath,
-		Order:     orders,
 	}, nil
 }
 
@@ -63,8 +62,4 @@ type Proof struct {
 	Existence bool `json:"existence"`
 	// Siblings is a list of non-empty sibling hashes.
 	Siblings [][]byte `json:"siblings"`
-	// Order is an array of hashing order to verify proof:
-	//	1. 0 is utils.Keccak256(hash, sibling)
-	//	2. 1 is utils.Keccak256(sibling, hash)
-	Order []int `json:"order"`
 }

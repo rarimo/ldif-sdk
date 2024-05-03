@@ -8,11 +8,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/keccak256"
 )
 
-const (
-	SameHashOrder    = 0
-	ReverseHashOrder = 1
-	TreeHeight       = 16
-)
+const TreeHeight = 16
 
 type Node struct {
 	Hash        []byte
@@ -24,7 +20,7 @@ type Node struct {
 type ITreap interface {
 	Remove(key []byte)
 	Insert(key []byte, priority uint64)
-	MerklePath(key []byte) ([][]byte, []int)
+	MerklePath(key []byte) [][]byte
 	MerkleRoot() []byte
 }
 
@@ -73,7 +69,7 @@ func (t *Treap) Insert(key []byte, priority uint64) {
 	t.Root = merge(merge(left, middle), right)
 }
 
-func (t *Treap) MerklePath(key []byte) ([][]byte, []int) {
+func (t *Treap) MerklePath(key []byte) [][]byte {
 	node := t.Root
 	result := make([][]byte, 0, TreeHeight)
 
@@ -81,8 +77,7 @@ func (t *Treap) MerklePath(key []byte) ([][]byte, []int) {
 		if bytes.Compare(node.Hash, key) == 0 {
 			result = append(result, hashNodes(node.Left, node.Right))
 			reverseSlice(result)
-			fillTreeHeight(&result)
-			return result, buildOrders(result, key)
+			return result
 		}
 
 		if bytes.Compare(node.Hash, key) > 0 {
@@ -101,47 +96,7 @@ func (t *Treap) MerklePath(key []byte) ([][]byte, []int) {
 		node = node.Right
 	}
 
-	return nil, nil
-}
-
-func buildOrders(siblings [][]byte, key []byte) []int {
-	var (
-		builded = key
-		res     = make([]int, 0, len(siblings))
-	)
-
-	for _, sibling := range siblings {
-		if len(sibling) == 0 {
-			res = append(res, SameHashOrder)
-			continue
-		}
-
-		order := getOrder(builded, sibling)
-		res = append(res, order)
-
-		if order == SameHashOrder {
-			builded = keccak256.Hash(builded, sibling)
-		}
-		if order == ReverseHashOrder {
-			builded = keccak256.Hash(sibling, builded)
-		}
-	}
-
-	return res
-}
-
-func fillTreeHeight(siblings *[][]byte) {
-	for i := len(*siblings); i < cap(*siblings); i++ {
-		*siblings = append(*siblings, []byte{})
-	}
-}
-
-func getOrder(a, b []byte) int {
-	if bytes.Compare(a, b) < 0 {
-		return SameHashOrder
-	}
-
-	return ReverseHashOrder
+	return nil
 }
 
 func (t *Treap) MerkleRoot() []byte {
