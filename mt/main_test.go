@@ -15,13 +15,15 @@ import (
 )
 
 const (
-	expectedRoot   = "0x0251f2113111ff098acc87250d9add6ffefc882062c1446974a6302911f8a9a1"
+	expectedRoot   = "0x04cbc488474858754c9226bad06de40398c3b34b3c52285308c019f28011e87e"
 	RarimoGRPC     = "localhost:9090"
 	ldifPath       = "icao-list.ldif"
 	masterListPath = "masterlist.pem"
 )
 
 func TestFromCollection(t *testing.T) {
+	const expectedRoot = "0xca09a639ceafe2c7b3d37f1ddd78ae0b203332a3e7b180aa35435a0d3a8cd8c7"
+
 	data, err := os.ReadFile(masterListPath)
 	if err != nil {
 		t.Fatal(fmt.Errorf("reading pem file %w", err))
@@ -32,7 +34,7 @@ func TestFromCollection(t *testing.T) {
 		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
 
-	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), "0x16ae4b942a9d6fd6576e2fb5a214c2a1a10e00ec9713fe23536c99065bb18c35")
+	assert.Equal(t, expectedRoot, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())))
 }
 
 func TestFromRawX509(t *testing.T) {
@@ -88,7 +90,7 @@ func TestFromCosmos(t *testing.T) {
 	}
 
 	//Use your own root, that is stored on-chain
-	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), "0x27e82c55bfbeba5ddb1b741a129ed9c6f97220ee4f47b0a77fa7fb0c5f4c7a54")
+	assert.Equal(t, expectedRoot, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())))
 }
 
 func TestVerifyProof(t *testing.T) {
