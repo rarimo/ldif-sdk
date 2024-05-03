@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/iden3/go-iden3-crypto/keccak256"
 	"github.com/rarimo/ldif-sdk/ldif"
 	"github.com/rarimo/ldif-sdk/utils"
 	"github.com/stretchr/testify/assert"
@@ -138,11 +139,9 @@ func buildRoot(input string, incProof Proof) (string, error) {
 		}
 		switch incProof.Order[i] {
 		case SameHashOrder:
-			calculated = MustPoseidon([][]byte{calculated, sibling}...)
+			calculated = keccak256.Hash(calculated, sibling)
 		case ReverseHashOrder:
-			calculated = MustPoseidon([][]byte{sibling, calculated}...)
-		default:
-			continue
+			calculated = keccak256.Hash(sibling, calculated)
 		}
 	}
 

@@ -1,9 +1,9 @@
 package mt
 
 import (
-	errs "errors"
 	"fmt"
 
+	"github.com/iden3/go-iden3-crypto/keccak256"
 	"github.com/rarimo/certificate-transparency-go/x509"
 	"github.com/rarimo/ldif-sdk/utils"
 	"gitlab.com/distributed_lab/logan/v3/errors"
@@ -28,17 +28,7 @@ func (h *certTree) BuildFromX509(certificates []*x509.Certificate) error {
 
 func (h *certTree) BuildFromRawPK(leaves [][]byte) error {
 	for _, leaf := range leaves {
-		leafHash, err := utils.PoseidonHashBig(leaf)
-		if err != nil {
-			if errs.Is(err, utils.ErrInvalidLength) {
-				continue
-			}
-			return fmt.Errorf("hash leaf: %w", err)
-		}
-		if leafHash == nil {
-			continue
-		}
-
+		leafHash := keccak256.Hash(leaf)
 		h.tree.Insert(leafHash, derivePriority(leafHash))
 	}
 
@@ -74,7 +64,7 @@ type Proof struct {
 	// Siblings is a list of non-empty sibling hashes.
 	Siblings [][]byte `json:"siblings"`
 	// Order is an array of hashing order to verify proof:
-	//	1. 0 is MustPoseidon(hash, sibling)
-	//	2. 1 is MustPoseidon(sibling, hash)
+	//	1. 0 is utils.Keccak256(hash, sibling)
+	//	2. 1 is utils.Keccak256(sibling, hash)
 	Order []int `json:"order"`
 }

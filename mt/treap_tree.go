@@ -2,12 +2,10 @@ package mt
 
 import (
 	"bytes"
-	"fmt"
 	"math"
 	"math/big"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
-	"github.com/rarimo/ldif-sdk/utils"
+	"github.com/iden3/go-iden3-crypto/keccak256"
 )
 
 const (
@@ -122,10 +120,10 @@ func buildOrders(siblings [][]byte, key []byte) []int {
 		res = append(res, order)
 
 		if order == SameHashOrder {
-			builded = MustPoseidon(builded, sibling)
+			builded = keccak256.Hash(builded, sibling)
 		}
 		if order == ReverseHashOrder {
-			builded = MustPoseidon(sibling, builded)
+			builded = keccak256.Hash(sibling, builded)
 		}
 	}
 
@@ -217,18 +215,16 @@ func hashNodes(a, b *Node) []byte {
 	return hash(left, right)
 }
 
-// priority = MustPoseidon(key) % (2^64-1)
-// function panics if MustPoseidon fails
+// priority = keccak256.Hash(key) % (2^64-1)
 func derivePriority(key []byte) uint64 {
 	var (
-		keyHash = new(big.Int).SetBytes(MustPoseidon(key))
+		keyHash = new(big.Int).SetBytes(keccak256.Hash(key))
 		u64     = new(big.Int).SetUint64(math.MaxUint64)
 	)
 
 	return keyHash.Mod(keyHash, u64).Uint64()
 }
 
-// function panics if MustPoseidon fails
 func hash(a, b []byte) []byte {
 	if len(a) == 0 {
 		return b
@@ -239,28 +235,10 @@ func hash(a, b []byte) []byte {
 	}
 
 	if bytes.Compare(a, b) < 0 {
-		return MustPoseidon([][]byte{a, b}...)
+		return keccak256.Hash(a, b)
 	}
 
-	return MustPoseidon([][]byte{b, a}...)
-}
-
-// MustPoseidon performs Poseidon hashing, but panics when error in
-// poseidon.Hash occurs, error may be in case if:
-//  1. invalid array length (0 or ... > 16)
-//  2. any value is not in finite field of constants.Q
-func MustPoseidon(inputs ...[]byte) []byte {
-	bigInputs := make([]*big.Int, len(inputs))
-	for i := 0; i < len(inputs); i++ {
-		bigInputs[i] = new(big.Int).SetBytes(inputs[i])
-	}
-
-	inputsHash, err := poseidon.Hash(bigInputs)
-	if err != nil {
-		panic(fmt.Errorf("failed to hash poseidon %v: %w", bigInputs, err))
-	}
-
-	return utils.To32Bytes(inputsHash.Bytes())
+	return keccak256.Hash(b, a)
 }
 
 func reverseSlice[S ~[]E, E any](s S) {
