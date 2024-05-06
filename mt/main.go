@@ -128,8 +128,7 @@ func (it *TreapTree) IsExists() bool {
 }
 
 // GenerateInclusionProof generates inclusion proof for the given pem certificate,
-// returns marshalled inclusion proof type that has boolean existence and bytes array
-// of siblings
+// returns marshalled inclusion proof type with a byte array of siblings
 func (it *TreapTree) GenerateInclusionProof(rawPemCert string) (*Proof, error) {
 	cert, err := utils.ParsePemKey(rawPemCert)
 	if err != nil {

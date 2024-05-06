@@ -51,15 +51,11 @@ func (h *certTree) GenInclusionProof(certificate *x509.Certificate) (*Proof, err
 
 	merklePath := h.tree.MerklePath(certHash)
 
-	return &Proof{
-		Existence: true,
-		Siblings:  merklePath,
-	}, nil
+	return &Proof{Siblings: merklePath}, nil
 }
 
+// Proof is a standard Merkle proof. If len(Siblings) == 0, this is proof of non-existence.
 type Proof struct {
-	// Existence indicates whether this is a proof of existence or non-existence.
-	Existence bool `json:"existence"`
 	// Siblings is a list of non-empty sibling hashes.
 	Siblings [][]byte `json:"siblings"`
 }
