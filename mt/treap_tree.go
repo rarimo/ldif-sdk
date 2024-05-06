@@ -75,7 +75,10 @@ func (t *Treap) MerklePath(key []byte) [][]byte {
 
 	for node != nil {
 		if bytes.Compare(node.Hash, key) == 0 {
-			result = append(result, hashNodes(node.Left, node.Right))
+			hashedNodes := hashNodes(node.Left, node.Right)
+			if hashedNodes != nil {
+				result = append(result, hashNodes(node.Left, node.Right))
+			}
 			reverseSlice(result)
 			return result
 		}
