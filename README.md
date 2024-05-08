@@ -5,7 +5,7 @@ General toolkit to work with ICAO CSCA MasterLists. It may:
  * Read and parse into different data structures `.ldif` files (as an example [ICAO PKD](https://pkddownloadsg.icao.int/) was used)
  * Create dynamic Merkle tree with treap data structure
  * Hash underlying certificates public keys
- * Build Merkle tree from previous point that stores certificates list and verifies inclusion of a certificate 
+ * Build Merkle tree from previous point that stores certificates' hashes and verifies inclusion of a certificate 
 
 Moreover, this library is compatible with [gomobile](https://pkg.go.dev/golang.org/x/mobile/cmd/gomobile) (no C libraries and only compatible types). 
 But to be able to surely compile it high-level [wrapper](./mt/main.go) should be used, binding scripts could be found 
@@ -51,8 +51,8 @@ After reading and parsing LDIF data these certificates can be converted into dif
 * PEM - using `converter.ToPem()` will reproduce an array of strings that stores certificates in a [PEM](https://datatracker.ietf.org/doc/html/rfc7468) format
 * X509 - using `converter.ToX509()` witll return an array of certificates in a [x509](https://datatracker.ietf.org/doc/html/rfc5280) format 
 
-In additional, there is a method `converter.RawPubKeys()` that gives an ability to get all public keys from parsed certificates, except duplicates and unsupported types (
-nowadays it handles only RSA public keys ).
+In addition, there is a method `converter.RawPubKeys()` that gives an ability to get all public keys from parsed certificates, except duplicates and unsupported types (
+nowadays it handles only RSA public keys).
 
 More examples and usages can be found in [test file](./ldif/ldif_test.go). 
 
@@ -101,13 +101,7 @@ structure:
 * `GenerateInclusionProof(pemCertificate)` - generates inclusion proof for given certificate. The proof is such structure:
 ```go
     type Proof struct {
-        // Existence indicates whether this is a proof of existence or non-existence.
-        Existence bool `json:"existence"`
-        // Siblings is a list of non-empty sibling hashes.
+        // Siblings is a list of non-empty sibling hashes to recover root.
         Siblings [][]byte `json:"siblings"`
-        // Order is an array of hashing order to verify proof in contract or ZK circuits:
-        // - 0 is HashFunc(hash, sibling)
-        // - 1 is HashFunc(sibling, hash)
-        Order []int `json:"order"`
     }
 ```
