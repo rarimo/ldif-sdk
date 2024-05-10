@@ -28,12 +28,13 @@ func ExtractPubKeys(certs []*x509.Certificate) ([][]byte, error) {
 			return nil, fmt.Errorf("%T: %w", cert.PublicKey, ErrUnsupportedPublicKey)
 		}
 
-		if _, ok := pkMap[keyValue.String()]; ok || len(keyValue.Bytes()) == ignoredKeyLength {
+		keyStr, keyBytes := keyValue.String(), keyValue.Bytes()
+		if _, ok := pkMap[keyStr]; ok || len(keyBytes) == ignoredKeyLength {
 			continue
 		}
 
-		pkMap[keyValue.String()] = struct{}{}
-		pubKeys = append(pubKeys, keyValue.Bytes())
+		pkMap[keyStr] = struct{}{}
+		pubKeys = append(pubKeys, keyBytes)
 	}
 
 	return pubKeys, nil

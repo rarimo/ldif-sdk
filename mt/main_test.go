@@ -1,21 +1,41 @@
 package mt
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 
+	"github.com/iden3/go-iden3-crypto/keccak256"
 	"github.com/rarimo/ldif-sdk/ldif"
 	"github.com/rarimo/ldif-sdk/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
-	expectedRoot = "0x0bb55cd80542e0a6dfc0347c56c5fe6d7eb7bc844cab709afbd082aa94d58077"
-	RarimoGRPC   = "localhost:9090"
-	ldifPath     = "icao-list.ldif"
+	expectedRoot   = "0x04cbc488474858754c9226bad06de40398c3b34b3c52285308c019f28011e87e"
+	RarimoGRPC     = "localhost:9090"
+	ldifPath       = "icao-list.ldif"
+	masterListPath = "masterlist.pem"
 )
+
+func TestFromCollection(t *testing.T) {
+	const expectedRoot = "0xca09a639ceafe2c7b3d37f1ddd78ae0b203332a3e7b180aa35435a0d3a8cd8c7"
+
+	data, err := os.ReadFile(masterListPath)
+	if err != nil {
+		t.Fatal(fmt.Errorf("reading pem file %w", err))
+	}
+
+	tree, err := BuildTreeFromCollection(data)
+	if err != nil {
+		t.Fatal(fmt.Errorf("building tree %w", err))
+	}
+
+	assert.Equal(t, expectedRoot, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())))
+}
 
 func TestFromRawX509(t *testing.T) {
 	data, err := ldif.FromFile(ldifPath)
@@ -28,12 +48,12 @@ func TestFromRawX509(t *testing.T) {
 		t.Fatal(fmt.Errorf("marshalling certificates %w", err))
 	}
 
-	tree, err := BuildTree(rawCertificates)
+	tree, err := BuildTreeFromMarshalled(rawCertificates)
 	if err != nil {
 		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
 
-	assert.Equal(t, tree.Root(), expectedRoot)
+	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), expectedRoot)
 }
 
 func TestFromRawPKs(t *testing.T) {
@@ -57,7 +77,7 @@ func TestFromRawPKs(t *testing.T) {
 		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
 
-	assert.Equal(t, tree.Root(), expectedRoot)
+	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), expectedRoot)
 }
 
 // NOTE: TestFromCosmos will work only with connection to Rarimo gRPC
@@ -70,7 +90,7 @@ func TestFromCosmos(t *testing.T) {
 	}
 
 	//Use your own root, that is stored on-chain
-	assert.Equal(t, tree.Root(), "0x27e82c55bfbeba5ddb1b741a129ed9c6f97220ee4f47b0a77fa7fb0c5f4c7a54")
+	assert.Equal(t, expectedRoot, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())))
 }
 
 func TestVerifyProof(t *testing.T) {
@@ -85,31 +105,26 @@ func TestVerifyProof(t *testing.T) {
 		t.Fatal(fmt.Errorf("marshalling certificates %w", err))
 	}
 
-	tree, err := BuildTree(rawCertificates)
+	tree, err := BuildTreeFromMarshalled(rawCertificates)
 	if err != nil {
 		t.Fatal(fmt.Errorf("building tree %w", err))
 	}
 
 	pemToTest := pems[30]
-	rawProof, err := tree.GenerateInclusionProof(pemToTest)
+	incProof, err := tree.GenerateInclusionProof(pemToTest)
 	if err != nil {
 		t.Fatal(fmt.Errorf("genereting inclusion proof %w", err))
 	}
 
-	var incProof proof
-	if err := json.Unmarshal(rawProof, &incProof); err != nil {
-		t.Fatal(fmt.Errorf("unmarshalling proof %w", err))
-	}
-
-	recoveredRoot, err := buildRoot(pemToTest, incProof)
+	recoveredRoot, err := buildRoot(pemToTest, *incProof)
 	if err != nil {
 		t.Fatal(fmt.Errorf("building root from proof: %w", err))
 	}
 
-	assert.Equal(t, tree.Root(), recoveredRoot)
+	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), recoveredRoot)
 }
 
-func buildRoot(input string, incProof proof) (string, error) {
+func buildRoot(input string, incProof Proof) (string, error) {
 	cert, err := utils.ParsePemKey(input)
 	if err != nil {
 		return "", err
@@ -121,17 +136,15 @@ func buildRoot(input string, incProof proof) (string, error) {
 	}
 
 	calculated := certHash
-	for i, sibling := range incProof.Siblings {
+	for _, sibling := range incProof.Siblings {
 		if len(sibling) == 0 {
 			continue
 		}
-		switch incProof.Order[i] {
-		case SameHashOrder:
-			calculated = MustPoseidon([][]byte{calculated, sibling}...)
-		case ReverseHashOrder:
-			calculated = MustPoseidon([][]byte{sibling, calculated}...)
-		default:
-			continue
+
+		if bytes.Compare(calculated, sibling) < 0 {
+			calculated = keccak256.Hash(calculated, sibling)
+		} else {
+			calculated = keccak256.Hash(sibling, calculated)
 		}
 	}
 

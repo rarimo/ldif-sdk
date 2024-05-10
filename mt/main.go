@@ -1,7 +1,6 @@
 package mt
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -20,9 +19,9 @@ func newTreapTree() *TreapTree {
 	}
 }
 
-// BuildTree builds a new dynamic Merkle tree with treap data structure
-// from raw pem X.509 certificates array marshalled in JSON
-func BuildTree(elements []byte) (*TreapTree, error) {
+// BuildTreeFromMarshalled builds a new dynamic Merkle tree with treap data structure
+// from raw pem certificates array marshalled in JSON,
+func BuildTreeFromMarshalled(elements []byte) (*TreapTree, error) {
 	treapTree := newTreapTree()
 
 	pemKeys := make([]string, 0)
@@ -31,6 +30,32 @@ func BuildTree(elements []byte) (*TreapTree, error) {
 	}
 
 	certificates, err := utils.ParsePemKeys(pemKeys)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parse raw pem elements")
+	}
+
+	err = treapTree.mTree.BuildFromX509(certificates)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to build tree")
+	}
+
+	return treapTree, nil
+}
+
+// BuildTreeFromCollection builds a new dynamic Merkle tree with treap data structure
+// from raw pem certificates, that looks like:
+// -----BEGIN CERTIFICATE-----
+// ...
+// QLIlpAZJZAlpPxwCIFlPFYmq4UcD6I5HJzTUvTRR1oMlYqwBC7SjwtwyspKc
+// ...
+// -----END CERTIFICATE-----
+// -----BEGIN CERTIFICATE-----
+// ...
+// MIIDKzCCAtCgAwIBAgIII+3Lgsfb3yUwCgYIKoZIzj0EAwIweTEUMBIGA1UEAwwL
+func BuildTreeFromCollection(data []byte) (*TreapTree, error) {
+	treapTree := newTreapTree()
+
+	certificates, err := utils.ParseCertificatesCollection(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parse raw pem elements")
 	}
@@ -85,12 +110,12 @@ func BuildFromCosmos(addr string, isSecure bool) (*TreapTree, error) {
 }
 
 // Root returns merkle tree root, if there is no tree empty string returned
-func (it *TreapTree) Root() string {
+func (it *TreapTree) Root() []byte {
 	if it.mTree.tree == nil || it.mTree.tree.MerkleRoot() == nil {
-		return ""
+		return []byte{}
 	}
 
-	return fmt.Sprintf("0x%s", hex.EncodeToString(it.mTree.tree.MerkleRoot()))
+	return it.mTree.tree.MerkleRoot()
 }
 
 // IsExists checks if the tree exists
@@ -103,9 +128,8 @@ func (it *TreapTree) IsExists() bool {
 }
 
 // GenerateInclusionProof generates inclusion proof for the given pem certificate,
-// returns marshalled inclusion proof type that has boolean existence and bytes array
-// of siblings
-func (it *TreapTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
+// returns marshalled inclusion proof type with a byte array of siblings
+func (it *TreapTree) GenerateInclusionProof(rawPemCert string) (*Proof, error) {
 	cert, err := utils.ParsePemKey(rawPemCert)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse pem key: %w", err)
@@ -116,10 +140,5 @@ func (it *TreapTree) GenerateInclusionProof(rawPemCert string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to generate inclusion proof: %w", err)
 	}
 
-	marshaledProof, err := json.Marshal(incProof)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal proof %v: %w", incProof, err)
-	}
-
-	return marshaledProof, nil
+	return incProof, nil
 }

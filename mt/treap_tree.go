@@ -2,19 +2,13 @@ package mt
 
 import (
 	"bytes"
-	"fmt"
 	"math"
 	"math/big"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
-	"github.com/rarimo/ldif-sdk/utils"
+	"github.com/iden3/go-iden3-crypto/keccak256"
 )
 
-const (
-	SameHashOrder    = 0
-	ReverseHashOrder = 1
-	TreeHeight       = 16
-)
+const TreeHeight = 16
 
 type Node struct {
 	Hash        []byte
@@ -26,7 +20,7 @@ type Node struct {
 type ITreap interface {
 	Remove(key []byte)
 	Insert(key []byte, priority uint64)
-	MerklePath(key []byte) ([][]byte, []int)
+	MerklePath(key []byte) [][]byte
 	MerkleRoot() []byte
 }
 
@@ -75,16 +69,18 @@ func (t *Treap) Insert(key []byte, priority uint64) {
 	t.Root = merge(merge(left, middle), right)
 }
 
-func (t *Treap) MerklePath(key []byte) ([][]byte, []int) {
+func (t *Treap) MerklePath(key []byte) [][]byte {
 	node := t.Root
 	result := make([][]byte, 0, TreeHeight)
 
 	for node != nil {
 		if bytes.Compare(node.Hash, key) == 0 {
-			result = append(result, hashNodes(node.Left, node.Right))
+			hashedNodes := hashNodes(node.Left, node.Right)
+			if hashedNodes != nil {
+				result = append(result, hashNodes(node.Left, node.Right))
+			}
 			reverseSlice(result)
-			fillTreeHeight(&result)
-			return result, buildOrders(result, key)
+			return result
 		}
 
 		if bytes.Compare(node.Hash, key) > 0 {
@@ -103,47 +99,7 @@ func (t *Treap) MerklePath(key []byte) ([][]byte, []int) {
 		node = node.Right
 	}
 
-	return nil, nil
-}
-
-func buildOrders(siblings [][]byte, key []byte) []int {
-	var (
-		builded = key
-		res     = make([]int, 0, len(siblings))
-	)
-
-	for _, sibling := range siblings {
-		if len(sibling) == 0 {
-			res = append(res, SameHashOrder)
-			continue
-		}
-
-		order := getOrder(builded, sibling)
-		res = append(res, order)
-
-		if order == SameHashOrder {
-			builded = MustPoseidon(builded, sibling)
-		}
-		if order == ReverseHashOrder {
-			builded = MustPoseidon(sibling, builded)
-		}
-	}
-
-	return res
-}
-
-func fillTreeHeight(siblings *[][]byte) {
-	for i := len(*siblings); i < cap(*siblings); i++ {
-		*siblings = append(*siblings, []byte{})
-	}
-}
-
-func getOrder(a, b []byte) int {
-	if bytes.Compare(a, b) < 0 {
-		return SameHashOrder
-	}
-
-	return ReverseHashOrder
+	return nil
 }
 
 func (t *Treap) MerkleRoot() []byte {
@@ -217,18 +173,16 @@ func hashNodes(a, b *Node) []byte {
 	return hash(left, right)
 }
 
-// priority = MustPoseidon(key) % (2^64-1)
-// function panics if MustPoseidon fails
+// priority = keccak256.Hash(key) % (2^64-1)
 func derivePriority(key []byte) uint64 {
 	var (
-		keyHash = new(big.Int).SetBytes(MustPoseidon(key))
+		keyHash = new(big.Int).SetBytes(keccak256.Hash(key))
 		u64     = new(big.Int).SetUint64(math.MaxUint64)
 	)
 
 	return keyHash.Mod(keyHash, u64).Uint64()
 }
 
-// function panics if MustPoseidon fails
 func hash(a, b []byte) []byte {
 	if len(a) == 0 {
 		return b
@@ -239,28 +193,10 @@ func hash(a, b []byte) []byte {
 	}
 
 	if bytes.Compare(a, b) < 0 {
-		return MustPoseidon([][]byte{a, b}...)
+		return keccak256.Hash(a, b)
 	}
 
-	return MustPoseidon([][]byte{b, a}...)
-}
-
-// MustPoseidon performs Poseidon hashing, but panics when error in
-// poseidon.Hash occurs, error may be in case if:
-//  1. invalid array length (0 or ... > 16)
-//  2. any value is not in finite field of constants.Q
-func MustPoseidon(inputs ...[]byte) []byte {
-	bigInputs := make([]*big.Int, len(inputs))
-	for i := 0; i < len(inputs); i++ {
-		bigInputs[i] = new(big.Int).SetBytes(inputs[i])
-	}
-
-	inputsHash, err := poseidon.Hash(bigInputs)
-	if err != nil {
-		panic(fmt.Errorf("failed to hash poseidon %v: %w", bigInputs, err))
-	}
-
-	return utils.To32Bytes(inputsHash.Bytes())
+	return keccak256.Hash(b, a)
 }
 
 func reverseSlice[S ~[]E, E any](s S) {
