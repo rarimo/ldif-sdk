@@ -1,9 +1,9 @@
 package mt
 
 import (
-	errs "errors"
 	"fmt"
 
+	"github.com/iden3/go-iden3-crypto/keccak256"
 	"github.com/rarimo/certificate-transparency-go/x509"
 	"github.com/rarimo/ldif-sdk/utils"
 	"gitlab.com/distributed_lab/logan/v3/errors"
@@ -28,17 +28,7 @@ func (h *certTree) BuildFromX509(certificates []*x509.Certificate) error {
 
 func (h *certTree) BuildFromRawPK(leaves [][]byte) error {
 	for _, leaf := range leaves {
-		leafHash, err := utils.PoseidonHashBig(leaf)
-		if err != nil {
-			if errs.Is(err, utils.ErrInvalidLength) {
-				continue
-			}
-			return fmt.Errorf("hash leaf: %w", err)
-		}
-		if leafHash == nil {
-			continue
-		}
-
+		leafHash := keccak256.Hash(leaf)
 		h.tree.Insert(leafHash, derivePriority(leafHash))
 	}
 
@@ -59,22 +49,13 @@ func (h *certTree) GenInclusionProof(certificate *x509.Certificate) (*Proof, err
 		return nil, errors.Wrap(err, "failed to hash certificate")
 	}
 
-	merklePath, orders := h.tree.MerklePath(certHash)
+	merklePath := h.tree.MerklePath(certHash)
 
-	return &Proof{
-		Existence: true,
-		Siblings:  merklePath,
-		Order:     orders,
-	}, nil
+	return &Proof{Siblings: merklePath}, nil
 }
 
+// Proof is a standard Merkle proof. If len(Siblings) == 0, this is proof of non-existence.
 type Proof struct {
-	// Existence indicates whether this is a proof of existence or non-existence.
-	Existence bool `json:"existence"`
 	// Siblings is a list of non-empty sibling hashes.
 	Siblings [][]byte `json:"siblings"`
-	// Order is an array of hashing order to verify proof:
-	//	1. 0 is MustPoseidon(hash, sibling)
-	//	2. 1 is MustPoseidon(sibling, hash)
-	Order []int `json:"order"`
 }
