@@ -1,8 +1,11 @@
 package ldif
 
 import (
+	"context"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var PEMCerts = []string{
@@ -430,6 +433,11 @@ pkdMasterListContent:: MIIpwQYJKoZIhvcNAQcCoIIpsjCCKa4CAQMxDzANBglghkgBZQMEA
 
 `
 
+const (
+	bucketName = "rarimo-temp"
+	fileName   = "icaopkd-list.ldif"
+)
+
 func TestLDIFToPEM1(t *testing.T) {
 	converter, err := FromReader(strings.NewReader(ldifData))
 	if err != nil {
@@ -456,6 +464,15 @@ func TestLDIFToPEM2(t *testing.T) {
 			t.Fatalf("certificates equal")
 		}
 	}
+}
+
+func TestLDIFFromRemote(t *testing.T) {
+	data, err := FromS3Bucket(context.Background(), bucketName, fileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NotEqual(t, len(data.ToPem()), 0)
 }
 
 // TestLDIFToPubKeys along with other tests coverts all functions in this package
