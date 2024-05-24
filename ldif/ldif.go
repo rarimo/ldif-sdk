@@ -2,15 +2,23 @@ package ldif
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"io"
 	"os"
 	"regexp"
+	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/rarimo/certificate-transparency-go/x509"
 	"github.com/rarimo/ldif-sdk/utils"
+	"google.golang.org/api/option"
+)
+
+const (
+	downloadingTimeout = time.Second * 60
 )
 
 type LDIF interface {
@@ -21,6 +29,26 @@ type LDIF interface {
 
 type ldif struct {
 	certificates []*x509.Certificate
+}
+
+// FromS3Bucket creates new LDIF instance from ICAO list downloaded from remote S3 (like Google Storage or Amazon S3)
+func FromS3Bucket(ctx context.Context, bucketName string, fileName string) (LDIF, error) {
+	client, err := storage.NewClient(ctx, option.WithoutAuthentication())
+	if err != nil {
+		return nil, fmt.Errorf("creating new storage client: %w", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, downloadingTimeout)
+	defer cancel()
+
+	objReader, err := client.Bucket(bucketName).Object(fileName).NewReader(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("reading content %s from %s: %w", bucketName, fileName, err)
+	}
+	defer objReader.Close()
+
+	return FromReader(objReader)
 }
 
 // FromFile creates new LDIF instance from file

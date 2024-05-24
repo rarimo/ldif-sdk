@@ -19,7 +19,8 @@ or a sequence of lines describing a set of changes to a directory
 entry. More info about LDIF format may be found in [RFC 2849](https://datatracker.ietf.org/doc/html/rfc2849).
 
 Our library provides different approaches for parsing data: reading file from 
-filesystem, reading data from `io.Reader` or from raw file bytes. Under the hood it looks through the file,
+filesystem, reading data from `io.Reader` or from raw file bytes. Moreover, there is an ability to parse file that is 
+stored in S3 compatible _public_ file storage. Under the hood it looks through the file,
 searching by desired phrases, then fetched parts (master lists) decoded and unmarshalled to the structure with 
 underlying certificates list.
 
@@ -36,6 +37,13 @@ To start working with ICAO ldif parser these code snippets may be used:
     converter, err := FromReader(reader) // Read data from io.Reader and parse it
     if err != nil {
         return errors.Wrap(err, "failed to create new ldif converter")
+    }
+	
+	...
+	
+    converter, err := FromS3Bucket(context.Background(), bucket, file) // Read data from remote file storage 
+    if err != nil {
+    return errors.Wrap(err, "failed to create new ldif converter")
     }
 	
     ...
