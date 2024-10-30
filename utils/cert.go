@@ -9,7 +9,7 @@ import (
 	"github.com/rarimo/certificate-transparency-go/x509"
 )
 
-// ExtractPubKeys extracts N values of RSA public keys from certificates, which
+// ExtractPubKeys extracts raw data of public keys from certificates, which
 // can be used for hashing later.
 func ExtractPubKeys(certs []*x509.Certificate) ([][]byte, error) {
 	pubKeys := make([][]byte, 0, len(certs))
@@ -22,8 +22,8 @@ func ExtractPubKeys(certs []*x509.Certificate) ([][]byte, error) {
 		case *rsa.PublicKey:
 			keyValue = key.N
 		case *ecdsa.PublicKey:
-			// FIXME @violog implement ECDSA support or confirm it to be ignored
-			continue
+			rawKeyBytes := append(key.X.Bytes(), key.Y.Bytes()...)
+			keyValue = new(big.Int).SetBytes(rawKeyBytes)
 		default:
 			return nil, fmt.Errorf("%T: %w", cert.PublicKey, ErrUnsupportedPublicKey)
 		}

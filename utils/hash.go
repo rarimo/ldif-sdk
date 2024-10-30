@@ -12,7 +12,7 @@ import (
 // ZKP circuits do not support 768 bytes keys, now there are only 8 keys with this length
 const ignoredKeyLength = 768
 
-var ErrUnsupportedPublicKey = errors.New("unsupported public key, supported formats: rsa")
+var ErrUnsupportedPublicKey = errors.New("unsupported public key, supported formats: rsa, ecdsa")
 
 // HashCertificate hashes the RSA public key of the certificate
 func HashCertificate(certificate *x509.Certificate) ([]byte, error) {
