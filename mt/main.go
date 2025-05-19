@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	cosmos "github.com/rarimo/ldif-sdk/cosmos/pkg/types"
 	"github.com/rarimo/ldif-sdk/utils"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
@@ -81,29 +80,6 @@ func BuildFromRaw(leaves []string) (*TreapTree, error) {
 	err := treapTree.mTree.BuildFromRawPK(rawKeys)
 	if err != nil {
 		return nil, fmt.Errorf("build from leaves: %w", err)
-	}
-
-	return treapTree, nil
-}
-
-// BuildFromCosmos builds a new dynamic Merkle tree with treap data structure by getting elements
-// directly from the Cosmos. It requires GRPC Cosmos address with secure flag.
-func BuildFromCosmos(addr string, isSecure bool) (*TreapTree, error) {
-	treapTree := newTreapTree()
-
-	grpcClient, err := utils.NewGRPCClient(addr, isSecure)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create grpc client: %w", err)
-	}
-
-	leaves, err := utils.FetchHashLeavesFromCosmos(cosmos.NewQueryClient(grpcClient))
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch leaves from cosmos: %w", err)
-	}
-
-	err = treapTree.mTree.BuildFromHashes(leaves)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build tree from pub key hashes: %w", err)
 	}
 
 	return treapTree, nil

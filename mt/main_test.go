@@ -16,7 +16,6 @@ import (
 
 const (
 	expectedRoot   = "0x04cbc488474858754c9226bad06de40398c3b34b3c52285308c019f28011e87e"
-	RarimoGRPC     = "localhost:9090"
 	ldifPath       = "icao-list.ldif"
 	masterListPath = "masterlist.pem"
 )
@@ -78,19 +77,6 @@ func TestFromRawPKs(t *testing.T) {
 	}
 
 	assert.Equal(t, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())), expectedRoot)
-}
-
-// NOTE: TestFromCosmos will work only with connection to Rarimo gRPC
-// with CSCA_ROOT_UPDATE proposal in order to have anything to build
-// tree from.
-func TestFromCosmos(t *testing.T) {
-	tree, err := BuildFromCosmos(RarimoGRPC, false)
-	if err != nil {
-		t.Fatal(fmt.Errorf("failed to build tree from cosmos %w", err))
-	}
-
-	//Use your own root, that is stored on-chain
-	assert.Equal(t, expectedRoot, fmt.Sprintf("0x%s", hex.EncodeToString(tree.Root())))
 }
 
 func TestVerifyProof(t *testing.T) {
